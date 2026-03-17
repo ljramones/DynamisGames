@@ -1,0 +1,76 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.dynamisengine.games</groupId>
+        <artifactId>dynamis-games</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>doom-clone</artifactId>
+    <name>Doom Clone Reference Game</name>
+
+    <dependencies>
+        <!-- WorldEngine -->
+        <dependency>
+            <groupId>org.dynamisengine.worldengine</groupId>
+            <artifactId>world-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.dynamisengine.worldengine</groupId>
+            <artifactId>world-runtime</artifactId>
+        </dependency>
+
+        <!-- Window -->
+        <dependency>
+            <groupId>org.dynamisengine.window</groupId>
+            <artifactId>window-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.dynamisengine.window</groupId>
+            <artifactId>window-glfw</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- LightEngine -->
+        <dependency>
+            <groupId>org.dynamisengine.light</groupId>
+            <artifactId>engine-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.dynamisengine.light</groupId>
+            <artifactId>engine-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.dynamisengine.light</groupId>
+            <artifactId>engine-impl-vulkan</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Input -->
+        <dependency>
+            <groupId>org.dynamisengine.input</groupId>
+            <artifactId>input-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.dynamisengine.input</groupId>
+            <artifactId>input-runtime</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Content -->
+        <dependency>
+            <groupId>org.dynamisengine.content</groupId>
+            <artifactId>content-api</artifactId>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

@@ -1,0 +1,138 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.dynamisengine</groupId>
+        <artifactId>dynamis-parent</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <groupId>org.dynamisengine.games</groupId>
+    <artifactId>dynamis-games</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>DynamisGames</name>
+    <description>Reference game applications built on the Dynamis engine.</description>
+
+    <modules>
+        <module>doom-clone</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.parameters>true</maven.compiler.parameters>
+        <junit.version>5.11.4</junit.version>
+
+        <!-- Dynamis engine versions -->
+        <dynamis.core.version>1.0.0</dynamis.core.version>
+        <dynamis.worldengine.version>1.0.0-SNAPSHOT</dynamis.worldengine.version>
+        <dynamis.window.version>0.1.0-SNAPSHOT</dynamis.window.version>
+        <dynamis.light.version>0.1.0-SNAPSHOT</dynamis.light.version>
+        <dynamis.input.version>1.0.0-SNAPSHOT</dynamis.input.version>
+        <dynamis.content.version>1.0.0-SNAPSHOT</dynamis.content.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- JUnit BOM -->
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- WorldEngine -->
+            <dependency>
+                <groupId>org.dynamisengine.worldengine</groupId>
+                <artifactId>world-api</artifactId>
+                <version>${dynamis.worldengine.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dynamisengine.worldengine</groupId>
+                <artifactId>world-runtime</artifactId>
+                <version>${dynamis.worldengine.version}</version>
+            </dependency>
+
+            <!-- Window -->
+            <dependency>
+                <groupId>org.dynamisengine.window</groupId>
+                <artifactId>window-api</artifactId>
+                <version>${dynamis.window.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dynamisengine.window</groupId>
+                <artifactId>window-glfw</artifactId>
+                <version>${dynamis.window.version}</version>
+            </dependency>
+
+            <!-- LightEngine -->
+            <dependency>
+                <groupId>org.dynamisengine.light</groupId>
+                <artifactId>engine-api</artifactId>
+                <version>${dynamis.light.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dynamisengine.light</groupId>
+                <artifactId>engine-spi</artifactId>
+                <version>${dynamis.light.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dynamisengine.light</groupId>
+                <artifactId>engine-impl-vulkan</artifactId>
+                <version>${dynamis.light.version}</version>
+            </dependency>
+
+            <!-- Input -->
+            <dependency>
+                <groupId>org.dynamisengine.input</groupId>
+                <artifactId>input-api</artifactId>
+                <version>${dynamis.input.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dynamisengine.input</groupId>
+                <artifactId>input-runtime</artifactId>
+                <version>${dynamis.input.version}</version>
+            </dependency>
+
+            <!-- Content -->
+            <dependency>
+                <groupId>org.dynamisengine.content</groupId>
+                <artifactId>content-api</artifactId>
+                <version>${dynamis.content.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                    <compilerArgs>
+                        <arg>--enable-preview</arg>
+                        <arg>--add-modules</arg>
+                        <arg>jdk.incubator.vector</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <useModulePath>false</useModulePath>
+                    <argLine>--enable-preview --add-modules jdk.incubator.vector</argLine>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
