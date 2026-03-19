@@ -26,6 +26,7 @@
         <module>interaction</module>
         <module>ecs-basics</module>
         <module>rendering-basics</module>
+        <module>interaction-rendered</module>
     </modules>
 
     <properties>
