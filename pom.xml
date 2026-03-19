@@ -27,6 +27,7 @@
         <module>ecs-basics</module>
         <module>rendering-basics</module>
         <module>interaction-rendered</module>
+        <module>collision-basics</module>
     </modules>
 
     <properties>
