@@ -7,8 +7,7 @@ import org.dynamisengine.worldengine.api.telemetry.WorldTelemetrySnapshot;
 /**
  * The simplest possible Dynamis game.
  *
- * Demonstrates the WorldEngine facade: initialize, tick, shutdown, telemetry.
- * This is what a game developer writes. Everything else is handled by the engine.
+ * Demonstrates WorldEngine with Audio and Input subsystems registered.
  */
 public final class HelloWorldGame implements WorldApplication {
 

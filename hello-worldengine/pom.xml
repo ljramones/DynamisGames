@@ -23,7 +23,8 @@
       <groupId>org.dynamisengine.worldengine</groupId>
       <artifactId>world-runtime</artifactId>
       <version>1.0.0-SNAPSHOT</version>
-      <scope>runtime</scope>
     </dependency>
+    <!-- Audio/Input adapters are proving-mode stubs for now.
+         Full integration will use real DynamisAudio/DynamisInput deps. -->
   </dependencies>
 </project>
