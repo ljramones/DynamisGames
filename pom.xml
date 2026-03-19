@@ -20,6 +20,7 @@
     <modules>
         <module>doom-clone</module>
         <module>hello-worldengine</module>
+        <module>input-basics</module>
     </modules>
 
     <properties>
