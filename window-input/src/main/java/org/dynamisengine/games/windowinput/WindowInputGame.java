@@ -5,6 +5,8 @@ import org.dynamisengine.games.windowinput.subsystem.WindowSubsystem;
 import org.dynamisengine.input.api.frame.InputFrame;
 import org.dynamisengine.input.api.gesture.GestureFrame;
 import org.dynamisengine.input.core.GestureRecognizer;
+import org.dynamisengine.window.api.InputEvent;
+import org.dynamisengine.window.api.WindowEvents;
 import org.dynamisengine.worldengine.api.GameContext;
 import org.dynamisengine.worldengine.api.WorldApplication;
 
@@ -14,9 +16,6 @@ import static org.dynamisengine.games.windowinput.WindowInputBindings.*;
 
 /**
  * Live keyboard/mouse input through a real GLFW window.
- *
- * Opens a window. Press keys. See actions and gestures fire in the console.
- * Press Escape or close the window to exit.
  */
 public final class WindowInputGame implements WorldApplication {
 
@@ -24,6 +23,7 @@ public final class WindowInputGame implements WorldApplication {
     private final WindowInputSubsystem inputSubsystem;
     private GestureRecognizer recognizer;
     private float playerX = 0.0f;
+    private long totalEvents = 0;
 
     public WindowInputGame(WindowSubsystem windowSubsystem,
                            WindowInputSubsystem inputSubsystem) {
@@ -37,12 +37,12 @@ public final class WindowInputGame implements WorldApplication {
 
         System.out.println("=== Window Input Demo ===");
         System.out.println("A real GLFW window is open. Try these controls:");
-        System.out.println("  A / Left Arrow  → Move left");
-        System.out.println("  D / Right Arrow → Move right");
-        System.out.println("  Space (tap)     → Quick jump");
-        System.out.println("  Space (hold)    → Charge jump");
-        System.out.println("  D (double-tap)  → Dash right");
-        System.out.println("  Escape          → Quit");
+        System.out.println("  A / Left Arrow  -> Move left");
+        System.out.println("  D / Right Arrow -> Move right");
+        System.out.println("  Space (tap)     -> Quick jump");
+        System.out.println("  Space (hold)    -> Charge jump");
+        System.out.println("  D (double-tap)  -> Dash right");
+        System.out.println("  Escape          -> Quit");
         System.out.println();
     }
 
@@ -57,7 +57,16 @@ public final class WindowInputGame implements WorldApplication {
             return;
         }
 
-        // Get input frame from the subsystem
+        // Log raw events to diagnose input capture
+        WindowEvents rawEvents = windowSubsystem.lastEvents();
+        if (!rawEvents.inputEvents().isEmpty()) {
+            totalEvents += rawEvents.inputEvents().size();
+            for (var event : rawEvents.inputEvents()) {
+                System.out.println("  [RAW] " + event);
+            }
+        }
+
+        // Get input frame
         InputFrame frame = inputSubsystem.lastFrame();
         if (frame == null) return;
 
@@ -75,17 +84,15 @@ public final class WindowInputGame implements WorldApplication {
         float moveX = frame.axis(MOVE_X);
         playerX += moveX * deltaSeconds * 5.0f;
 
-        // Display — only when something happens
-        boolean hasInput = frame.actions().values().stream()
+        // Display when something happens
+        boolean hasActions = frame.actions().values().stream()
                 .anyMatch(a -> a.pressed() || a.released());
         boolean hasGestures = gestures.anyFired();
-        boolean hasMovement = moveX != 0.0f;
 
-        if (hasInput || hasGestures) {
+        if (hasActions || hasGestures) {
             StringBuilder sb = new StringBuilder();
             sb.append(String.format("Tick %4d | ", tick));
 
-            // Pressed/released
             var pressed = frame.actions().entrySet().stream()
                     .filter(e -> e.getValue().pressed())
                     .map(e -> "+" + e.getKey().value())
@@ -97,7 +104,7 @@ public final class WindowInputGame implements WorldApplication {
 
             if (!pressed.isEmpty()) sb.append("Press: [").append(pressed).append("] ");
             if (!released.isEmpty()) sb.append("Release: [").append(released).append("] ");
-            if (hasMovement) sb.append(String.format("MoveX=%.1f PlayerX=%.1f ", moveX, playerX));
+            if (moveX != 0.0f) sb.append(String.format("MoveX=%.1f X=%.1f ", moveX, playerX));
             if (hasGestures) {
                 var names = gestures.firedGestures().stream()
                         .map(g -> g.value()).collect(Collectors.joining(", "));
@@ -113,21 +120,18 @@ public final class WindowInputGame implements WorldApplication {
         }
 
         // Periodic telemetry
-        if (tick % 120 == 0 && tick > 0) {
+        if (tick % 300 == 0 && tick > 0) {
             var t = context.telemetry();
             if (t != null) {
-                System.out.println("[Telemetry] " + t.statusLine());
+                System.out.println("[Telemetry] " + t.statusLine()
+                        + " | rawEvents=" + totalEvents);
             }
         }
     }
 
     @Override
     public void shutdown(GameContext context) {
-        var t = context.telemetry();
-        if (t != null) {
-            System.out.println();
-            System.out.println(t.detailedReport());
-        }
-        System.out.println("[WindowInput] Shutdown. Final playerX: " + playerX);
+        System.out.println("[WindowInput] Shutdown. PlayerX=" + playerX
+                + " TotalRawEvents=" + totalEvents);
     }
 }
