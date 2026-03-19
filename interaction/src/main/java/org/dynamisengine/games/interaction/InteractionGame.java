@@ -50,6 +50,7 @@ public final class InteractionGame implements WorldApplication {
     private InteractionAudio audio;
     private static final float CURSOR_SPEED = 8.0f;
     private static final float PULSE_LIFETIME = 2.0f;
+    private boolean wasMoving = false;
 
     public InteractionGame(WindowSubsystem windowSub, WindowInputSubsystem inputSub,
                            AudioSubsystem audioSub, DefaultInputProcessor processor) {
@@ -116,11 +117,20 @@ public final class InteractionGame implements WorldApplication {
             System.out.println("  [Reset] State cleared");
         }
 
-        // Move cursor
+        // Move cursor — always give feedback so developer knows something is happening
         float mx = frame.axis(MOVE_X);
         float my = frame.axis(MOVE_Y);
         if (mx != 0 || my != 0) {
+            boolean wasStationary = !wasMoving;
+            wasMoving = true;
             state.moveCursor(mx * CURSOR_SPEED * deltaSeconds, my * CURSOR_SPEED * deltaSeconds);
+            if (context.tick() % 10 == 0) {
+                System.out.printf("  [Cursor] (%.1f, %.1f) active=%d%n",
+                        state.cursorX, state.cursorY, state.activeCount());
+            }
+            if (wasStationary) audio.onMove();
+        } else {
+            wasMoving = false;
         }
 
         // Spawn

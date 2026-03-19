@@ -35,6 +35,15 @@ public final class InteractionAudio {
         QuickPlayback.play(mixer, new ProceduralAudioAsset(synth));
     }
 
+    /** Subtle tick when cursor starts moving — 1200 Hz, very short. */
+    public void onMove() {
+        var osc = new SineOscillator(1200f, 0.08f, SR);
+        var env = new Envelope(0.001f, 0.015f, 0f, 0.005f, SR);
+        var synth = new SynthVoice(osc, env);
+        synth.noteOn(1200f, 0.08f);
+        QuickPlayback.play(mixer, new ProceduralAudioAsset(synth));
+    }
+
     /** Short click on reset. */
     public void onReset() {
         var osc = new SineOscillator(440f, 0.15f, SR);
