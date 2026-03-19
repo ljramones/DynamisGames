@@ -2,13 +2,13 @@ package org.dynamisengine.games.hello;
 
 import org.dynamisengine.worldengine.api.GameContext;
 import org.dynamisengine.worldengine.api.WorldApplication;
+import org.dynamisengine.worldengine.api.telemetry.WorldTelemetrySnapshot;
 
 /**
  * The simplest possible Dynamis game.
  *
- * Demonstrates the WorldEngine facade: initialize, tick, shutdown.
- * This is what a game developer writes. Everything else is handled
- * by the engine.
+ * Demonstrates the WorldEngine facade: initialize, tick, shutdown, telemetry.
+ * This is what a game developer writes. Everything else is handled by the engine.
  */
 public final class HelloWorldGame implements WorldApplication {
 
@@ -21,12 +21,19 @@ public final class HelloWorldGame implements WorldApplication {
     public void update(GameContext context, float deltaSeconds) {
         long tick = context.tick();
 
-        if (tick % 20 == 0) {
-            System.out.printf("[HelloWorld] Tick %d | elapsed=%.2fs | dt=%.4fs%n",
-                    tick, context.elapsedSeconds(), deltaSeconds);
+        if (tick % 30 == 0) {
+            WorldTelemetrySnapshot t = context.telemetry();
+            if (t != null) {
+                System.out.println("[Telemetry] " + t.statusLine());
+            }
         }
 
         if (tick >= 120) {
+            WorldTelemetrySnapshot t = context.telemetry();
+            if (t != null) {
+                System.out.println();
+                System.out.println(t.detailedReport());
+            }
             System.out.println("[HelloWorld] Reached tick 120. Stopping.");
             context.requestStop();
         }
@@ -34,6 +41,6 @@ public final class HelloWorldGame implements WorldApplication {
 
     @Override
     public void shutdown(GameContext context) {
-        System.out.println("[HelloWorld] Shutdown complete. Final tick: " + context.tick());
+        System.out.println("[HelloWorld] Shutdown complete.");
     }
 }
