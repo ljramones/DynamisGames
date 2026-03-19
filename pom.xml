@@ -23,6 +23,7 @@
         <module>input-basics</module>
         <module>window-input</module>
         <module>audio-basics</module>
+        <module>interaction</module>
     </modules>
 
     <properties>
