@@ -21,6 +21,7 @@
         <module>doom-clone</module>
         <module>hello-worldengine</module>
         <module>input-basics</module>
+        <module>window-input</module>
     </modules>
 
     <properties>
