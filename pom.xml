@@ -24,6 +24,7 @@
         <module>window-input</module>
         <module>audio-basics</module>
         <module>interaction</module>
+        <module>ecs-basics</module>
     </modules>
 
     <properties>
