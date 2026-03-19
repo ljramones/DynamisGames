@@ -48,3 +48,22 @@ This is the canonical example of how interactive game logic should be structured
 - **InteractionAudio** — audio feedback helper using QuickPlayback
 - **InteractionGame** — WorldApplication that reads input, mutates state, triggers audio
 - Three subsystems: Window, Input, Audio — all managed by WorldEngine
+
+## Facade effectiveness
+
+This module compiles to a **16 KB JAR** with **358 lines of game-specific code** across 5 classes:
+
+| File | Lines | Role |
+|------|-------|------|
+| `InteractionGame.java` | 168 | WorldApplication: input reading, state mutation, audio triggers |
+| `InteractionState.java` | 68 | Game state: cursor position + pulse list |
+| `InteractionAudio.java` | 55 | Audio feedback: spawn pop, expire tone, movement tick |
+| `Pulse.java` | 40 | Spawned object: position, age, lifetime |
+| `Main.java` | 27 | Entry point: register subsystems, run |
+
+The game module is tiny because the engine carries the operational complexity:
+Panama FFM CoreAudio, wait-free ring buffer, voice/mixer pipeline, GLFW window,
+input processor, subsystem coordinator, telemetry — all invisible to the 358 lines above.
+
+A proving module with real interactive behaviour should remain extremely small,
+because engine complexity belongs in Dynamis subsystems, not in game-facing modules.
