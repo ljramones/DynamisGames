@@ -22,6 +22,7 @@
         <module>hello-worldengine</module>
         <module>input-basics</module>
         <module>window-input</module>
+        <module>audio-basics</module>
     </modules>
 
     <properties>
