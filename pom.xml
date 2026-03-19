@@ -25,6 +25,7 @@
         <module>audio-basics</module>
         <module>interaction</module>
         <module>ecs-basics</module>
+        <module>rendering-basics</module>
     </modules>
 
     <properties>
