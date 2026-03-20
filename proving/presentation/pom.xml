@@ -20,5 +20,6 @@
         <module>camera-basics</module>
         <module>mesh-basics</module>
         <module>material-basics</module>
+        <module>lighting-basics</module>
     </modules>
 </project>
