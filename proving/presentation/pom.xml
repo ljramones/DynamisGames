@@ -23,5 +23,6 @@
         <module>lighting-basics</module>
         <module>scene-basics</module>
         <module>animation-basics</module>
+        <module>animation-events</module>
     </modules>
 </project>
