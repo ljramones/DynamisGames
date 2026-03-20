@@ -1,5 +1,7 @@
 package org.dynamisengine.games.anim;
 
+import org.dynamisengine.animis.runtime.transform.PropertyPlayer;
+import org.dynamisengine.animis.transform.PropertyClip;
 import org.dynamisengine.games.anim.subsystem.*;
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
@@ -48,8 +50,8 @@ public final class AnimationGame implements WorldApplication {
     private MeshHandle torusMesh, sphereMesh, cubeMesh;
 
     // Animation
-    private AnimationPlayer heroPlayer;
-    private AnimationPlayer[] accentPlayers;
+    private PropertyPlayer heroPlayer;
+    private PropertyPlayer[] accentPlayers;
 
     // Camera
     private float orbitYaw = 30f, orbitPitch = 25f, orbitDist = 10f;
@@ -87,11 +89,11 @@ public final class AnimationGame implements WorldApplication {
         sphereMesh = renderer.upload(SimpleMesh.sphere(0.5f, 12, 12));
         cubeMesh = renderer.upload(generateCube());
 
-        heroPlayer = new AnimationPlayer(AnimationClip.heroClip());
+        heroPlayer = new PropertyPlayer(DemoClips.heroClip());
 
-        accentPlayers = new AnimationPlayer[4];
+        accentPlayers = new PropertyPlayer[4];
         for (int i = 0; i < 4; i++) {
-            accentPlayers[i] = new AnimationPlayer(AnimationClip.orbitClip());
+            accentPlayers[i] = new PropertyPlayer(DemoClips.orbitClip());
             // Stagger start times
             for (int j = 0; j < i; j++) accentPlayers[i].update(1.5f);
         }

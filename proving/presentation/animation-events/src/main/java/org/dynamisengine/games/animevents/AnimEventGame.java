@@ -1,5 +1,8 @@
 package org.dynamisengine.games.animevents;
 
+import org.dynamisengine.animis.clip.AnimationEvent;
+import org.dynamisengine.animis.runtime.transform.PropertyPlayer;
+import org.dynamisengine.animis.transform.PropertyClip;
 import org.dynamisengine.audio.api.AcousticConstants;
 import org.dynamisengine.audio.procedural.*;
 import org.dynamisengine.games.animevents.subsystem.*;
@@ -20,7 +23,7 @@ import java.util.Map;
  * Animation events: timeline markers that trigger consequences.
  *
  * Proves: AnimationEvent markers on clips, crossing detection in
- * AnimationPlayer, one-shot dispatch with correct loop/pause/reset
+ * PropertyPlayer, one-shot dispatch with correct loop/pause/reset
  * behavior. Consequences: audio cue + color flash + event log.
  */
 public final class AnimEventGame implements WorldApplication {
@@ -47,8 +50,8 @@ public final class AnimEventGame implements WorldApplication {
     private final SceneRenderer renderer = new SceneRenderer();
 
     private MeshHandle torusMesh, sphereMesh, cubeMesh;
-    private AnimationPlayer heroPlayer;
-    private AnimationPlayer[] accentPlayers;
+    private PropertyPlayer heroPlayer;
+    private PropertyPlayer[] accentPlayers;
 
     // Camera
     private float orbitYaw = 30f, orbitPitch = 25f, orbitDist = 10f;
@@ -92,10 +95,10 @@ public final class AnimEventGame implements WorldApplication {
         sphereMesh = renderer.upload(SimpleMesh.sphere(0.5f, 12, 12));
         cubeMesh = renderer.upload(generateCube());
 
-        heroPlayer = new AnimationPlayer(AnimationClip.heroClipWithEvents());
-        accentPlayers = new AnimationPlayer[4];
+        heroPlayer = new PropertyPlayer(DemoClips.heroClipWithEvents());
+        accentPlayers = new PropertyPlayer[4];
         for (int i = 0; i < 4; i++) {
-            accentPlayers[i] = new AnimationPlayer(AnimationClip.orbitClip());
+            accentPlayers[i] = new PropertyPlayer(DemoClips.orbitClip());
             for (int j = 0; j < i; j++) accentPlayers[i].update(1.5f);
         }
 
@@ -132,7 +135,7 @@ public final class AnimEventGame implements WorldApplication {
         // Process events fired this frame
         for (AnimationEvent evt : heroPlayer.drainEvents()) {
             totalEventsFired++;
-            String logLine = String.format("t=%.2f [%s] #%d", evt.time(), evt.name(), totalEventsFired);
+            String logLine = String.format("t=%.2f [%s] #%d", evt.normalizedTime() * heroPlayer.duration(), evt.name(), totalEventsFired);
             eventLog.addFirst(logLine);
             while (eventLog.size() > MAX_LOG) eventLog.removeLast();
 

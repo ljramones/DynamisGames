@@ -1,5 +1,7 @@
 package org.dynamisengine.games.animblend;
 
+import org.dynamisengine.animis.runtime.transform.PropertyBlender;
+import org.dynamisengine.animis.transform.PropertyClip;
 import org.dynamisengine.audio.api.AcousticConstants;
 import org.dynamisengine.audio.procedural.*;
 import org.dynamisengine.games.animblend.subsystem.*;
@@ -17,7 +19,7 @@ import java.util.Map;
 /**
  * Animation blending: smooth crossfade between two clips.
  *
- * Proves: BlendState crossfade, weighted interpolation between
+ * Proves: PropertyBlender crossfade, weighted interpolation between
  * source/target clips, blend-weight progression, clean handoff
  * on completion. Two clips: idle (gentle) vs active (energetic).
  *
@@ -50,8 +52,8 @@ public final class BlendGame implements WorldApplication {
     private final SceneRenderer renderer = new SceneRenderer();
 
     private MeshHandle torusMesh, cubeMesh, sphereMesh;
-    private AnimationClip idleClip, activeClip;
-    private BlendState blendState;
+    private PropertyClip idleClip, activeClip;
+    private PropertyBlender blendState;
 
     private float orbitYaw = 30f, orbitPitch = 25f, orbitDist = 9f;
     private int transitionCount = 0;
@@ -92,9 +94,9 @@ public final class BlendGame implements WorldApplication {
         cubeMesh = renderer.upload(generateCube());
         sphereMesh = renderer.upload(SimpleMesh.sphere(0.5f, 12, 12));
 
-        idleClip = AnimationClip.idle();
-        activeClip = AnimationClip.active();
-        blendState = new BlendState(idleClip);
+        idleClip = DemoClips.idle();
+        activeClip = DemoClips.active();
+        blendState = new PropertyBlender(idleClip);
 
         System.out.println("=== Animation Blending ===");
         System.out.println("1=idle  2=active  (0.75s crossfade)");
@@ -109,7 +111,7 @@ public final class BlendGame implements WorldApplication {
 
         if (frame.pressed(QUIT)) { context.requestStop(); return; }
         if (frame.pressed(RESET)) {
-            blendState = new BlendState(idleClip);
+            blendState = new PropertyBlender(idleClip);
             orbitYaw=30; orbitPitch=25; orbitDist=9; transitionCount=0;
         }
         if (frame.pressed(PAUSE)) blendState.togglePause();
