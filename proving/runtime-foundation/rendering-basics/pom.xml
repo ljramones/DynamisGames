@@ -7,12 +7,12 @@
     <groupId>org.dynamisengine.games</groupId>
     <artifactId>dynamis-games</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
+    <relativePath>../../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>text-basics</artifactId>
-  <name>Text Basics</name>
-  <description>First text rendering: STBEasyFont + OpenGL shaders for HUD labels.</description>
+  <artifactId>rendering-basics</artifactId>
+  <name>Rendering Basics</name>
+  <description>First visual output from the Dynamis engine.</description>
 
   <dependencies>
     <dependency>
@@ -93,19 +93,6 @@
     <dependency>
       <groupId>org.lwjgl</groupId>
       <artifactId>lwjgl-opengl</artifactId>
-      <version>3.3.4</version>
-      <classifier>natives-macos-arm64</classifier>
-      <scope>runtime</scope>
-    </dependency>
-    <!-- STB for easy font rendering -->
-    <dependency>
-      <groupId>org.lwjgl</groupId>
-      <artifactId>lwjgl-stb</artifactId>
-      <version>3.3.4</version>
-    </dependency>
-    <dependency>
-      <groupId>org.lwjgl</groupId>
-      <artifactId>lwjgl-stb</artifactId>
       <version>3.3.4</version>
       <classifier>natives-macos-arm64</classifier>
       <scope>runtime</scope>

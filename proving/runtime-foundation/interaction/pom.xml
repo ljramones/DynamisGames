@@ -7,12 +7,12 @@
     <groupId>org.dynamisengine.games</groupId>
     <artifactId>dynamis-games</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
+    <relativePath>../../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>collision-basics</artifactId>
-  <name>Collision Basics</name>
-  <description>First game rule: pulse-to-target collision with audio and visual feedback.</description>
+  <artifactId>interaction</artifactId>
+  <name>Interaction Sandbox</name>
+  <description>Gameplay interaction sandbox with input, state, and audio feedback.</description>
 
   <dependencies>
     <dependency>
@@ -81,18 +81,6 @@
     <dependency>
       <groupId>org.lwjgl</groupId>
       <artifactId>lwjgl-glfw</artifactId>
-      <version>3.3.4</version>
-      <classifier>natives-macos-arm64</classifier>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.lwjgl</groupId>
-      <artifactId>lwjgl-opengl</artifactId>
-      <version>3.3.4</version>
-    </dependency>
-    <dependency>
-      <groupId>org.lwjgl</groupId>
-      <artifactId>lwjgl-opengl</artifactId>
       <version>3.3.4</version>
       <classifier>natives-macos-arm64</classifier>
       <scope>runtime</scope>

@@ -7,18 +7,15 @@
         <groupId>org.dynamisengine.games</groupId>
         <artifactId>dynamis-games</artifactId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>dynamis-proving</artifactId>
+    <artifactId>proving-presentation</artifactId>
     <packaging>pom</packaging>
-    <name>Dynamis Proving Modules</name>
-    <description>Progressive proving ladder validating each engine subsystem.</description>
+    <name>Proving — Track 2: Presentation/Graphics</name>
+    <description>Proves the engine can present a serious world: text, camera, mesh, materials, lighting, scene.</description>
 
     <modules>
-        <module>runtime-foundation</module>
-        <module>presentation</module>
-        <module>simulation</module>
-        <module>content-pipeline</module>
-        <module>developer-tools</module>
+        <module>text-basics</module>
     </modules>
 </project>

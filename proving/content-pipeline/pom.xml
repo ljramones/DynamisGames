@@ -7,18 +7,14 @@
         <groupId>org.dynamisengine.games</groupId>
         <artifactId>dynamis-games</artifactId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>dynamis-proving</artifactId>
+    <artifactId>proving-content-pipeline</artifactId>
     <packaging>pom</packaging>
-    <name>Dynamis Proving Modules</name>
-    <description>Progressive proving ladder validating each engine subsystem.</description>
+    <name>Proving — Track 4: Content/Asset Pipeline</name>
+    <description>Proves the engine can ingest real content: asset loading, mesh import, materials, hot-reload.</description>
 
     <modules>
-        <module>runtime-foundation</module>
-        <module>presentation</module>
-        <module>simulation</module>
-        <module>content-pipeline</module>
-        <module>developer-tools</module>
     </modules>
 </project>
