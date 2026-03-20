@@ -22,5 +22,6 @@
         <module>material-basics</module>
         <module>lighting-basics</module>
         <module>scene-basics</module>
+        <module>animation-basics</module>
     </modules>
 </project>
