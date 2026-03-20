@@ -96,7 +96,9 @@ public final class MgiGame implements WorldApplication {
             MeshData meshData = MgiMeshDataCodec.toMeshData(mgi);
 
             // Pack for GPU
-            PackedMesh packed = MeshPacker.pack(meshData, Packers.realtimeFast());
+            // Use debug pack spec: keeps all attributes as F32 (no SNORM8 compression)
+            // so the proving-level renderer can read them directly as floats.
+            PackedMesh packed = MeshPacker.pack(meshData, Packers.debug());
             RuntimeGeometryPayload payload = MeshForgeGpuBridge.payloadFromPackedMesh(packed);
 
             mgiMeshHandle = convertPayloadToHandle(payload);
@@ -175,9 +177,11 @@ public final class MgiGame implements WorldApplication {
         int posOff = -1, normOff = -1;
         for (var entry : layout.entries().values()) {
             String sem = entry.key().semantic().name();
+            System.out.printf("  Layout: %s offset=%d format=%s%n", sem, entry.offsetBytes(), entry.format());
             if ("POSITION".equals(sem)) posOff = entry.offsetBytes();
             else if ("NORMAL".equals(sem)) normOff = entry.offsetBytes();
         }
+        System.out.printf("  Stride=%d verts=%d bufSize=%d%n", stride, vertCount, vb.capacity());
 
         float[] verts = new float[vertCount * 6];
         for (int v = 0; v < vertCount; v++) {
