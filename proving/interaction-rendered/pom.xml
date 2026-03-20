@@ -7,11 +7,12 @@
     <groupId>org.dynamisengine.games</groupId>
     <artifactId>dynamis-games</artifactId>
     <version>1.0.0-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>hello-worldengine</artifactId>
-  <name>Hello WorldEngine</name>
-  <description>Minimal proving example for the WorldEngine developer facade.</description>
+  <artifactId>interaction-rendered</artifactId>
+  <name>Interaction Rendered</name>
+  <description>Visible interactive gameplay: input + ECS + audio + rendering.</description>
 
   <dependencies>
     <dependency>
@@ -24,7 +25,6 @@
       <artifactId>world-runtime</artifactId>
       <version>1.0.0-SNAPSHOT</version>
     </dependency>
-    <!-- Real DynamisAudio runtime -->
     <dependency>
       <groupId>org.dynamisengine.audio</groupId>
       <artifactId>dynamis-audio-api</artifactId>
@@ -52,11 +52,51 @@
     </dependency>
     <dependency>
       <groupId>org.dynamisengine.audio</groupId>
+      <artifactId>dynamis-audio-procedural</artifactId>
+      <version>0.1.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.dynamisengine.audio</groupId>
       <artifactId>dynamis-audio-backend-coreaudio</artifactId>
       <version>0.1.0-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
-    <!-- Real DynamisInput -->
+    <dependency>
+      <groupId>org.dynamisengine.window</groupId>
+      <artifactId>window-api</artifactId>
+      <version>0.1.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.dynamisengine.window</groupId>
+      <artifactId>window-glfw</artifactId>
+      <version>0.1.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl</artifactId>
+      <version>3.3.4</version>
+      <classifier>natives-macos-arm64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl-glfw</artifactId>
+      <version>3.3.4</version>
+      <classifier>natives-macos-arm64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl-opengl</artifactId>
+      <version>3.3.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl-opengl</artifactId>
+      <version>3.3.4</version>
+      <classifier>natives-macos-arm64</classifier>
+      <scope>runtime</scope>
+    </dependency>
     <dependency>
       <groupId>org.dynamisengine.input</groupId>
       <artifactId>input-api</artifactId>

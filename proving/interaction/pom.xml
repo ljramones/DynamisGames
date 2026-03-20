@@ -7,11 +7,12 @@
     <groupId>org.dynamisengine.games</groupId>
     <artifactId>dynamis-games</artifactId>
     <version>1.0.0-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>ecs-basics</artifactId>
-  <name>ECS Basics</name>
-  <description>DynamisECS as the canonical gameplay state model.</description>
+  <artifactId>interaction</artifactId>
+  <name>Interaction Sandbox</name>
+  <description>Gameplay interaction sandbox with input, state, and audio feedback.</description>
 
   <dependencies>
     <dependency>

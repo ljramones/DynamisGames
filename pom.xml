@@ -18,20 +18,8 @@
     <description>Reference game applications built on the Dynamis engine.</description>
 
     <modules>
-        <module>doom-clone</module>
-        <module>hello-worldengine</module>
-        <module>input-basics</module>
-        <module>window-input</module>
-        <module>audio-basics</module>
-        <module>interaction</module>
-        <module>ecs-basics</module>
-        <module>rendering-basics</module>
-        <module>interaction-rendered</module>
-        <module>collision-basics</module>
-        <module>arena-minigame</module>
-        <module>ui-basics</module>
-        <module>physics-basics</module>
-        <module>text-basics</module>
+        <module>proving</module>
+        <module>games</module>
     </modules>
 
     <properties>
