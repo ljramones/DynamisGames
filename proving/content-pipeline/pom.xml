@@ -13,8 +13,9 @@
     <artifactId>proving-content-pipeline</artifactId>
     <packaging>pom</packaging>
     <name>Proving — Track 4: Content/Asset Pipeline</name>
-    <description>Proves the engine can ingest real content: asset loading, mesh import, materials, hot-reload.</description>
+    <description>Proves canonical asset pipeline: MeshForge import, MGI runtime format, LightEngine integration.</description>
 
     <modules>
+        <module>mgi-basics</module>
     </modules>
 </project>
