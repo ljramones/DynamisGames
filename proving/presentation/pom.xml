@@ -18,5 +18,6 @@
     <modules>
         <module>text-basics</module>
         <module>camera-basics</module>
+        <module>mesh-basics</module>
     </modules>
 </project>
