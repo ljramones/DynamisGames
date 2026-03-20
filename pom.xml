@@ -30,6 +30,8 @@
         <module>collision-basics</module>
         <module>arena-minigame</module>
         <module>ui-basics</module>
+        <module>physics-basics</module>
+        <module>text-basics</module>
     </modules>
 
     <properties>
