@@ -21,5 +21,6 @@
         <module>mesh-basics</module>
         <module>material-basics</module>
         <module>lighting-basics</module>
+        <module>scene-basics</module>
     </modules>
 </project>
