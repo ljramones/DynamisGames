@@ -29,6 +29,7 @@
         <module>interaction-rendered</module>
         <module>collision-basics</module>
         <module>arena-minigame</module>
+        <module>ui-basics</module>
     </modules>
 
     <properties>
