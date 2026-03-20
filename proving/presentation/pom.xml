@@ -25,5 +25,6 @@
         <module>animation-basics</module>
         <module>animation-events</module>
         <module>animation-blending</module>
+        <module>animation-gameplay-sync</module>
     </modules>
 </project>
