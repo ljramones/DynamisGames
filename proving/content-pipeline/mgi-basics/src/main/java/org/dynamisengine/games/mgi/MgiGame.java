@@ -161,7 +161,7 @@ public final class MgiGame implements WorldApplication {
 
     @Override
     public void shutdown(GameContext context) {
-        renderer.deleteMesh(mgiMeshHandle);
+        if (mgiMeshHandle != null) renderer.deleteMesh(mgiMeshHandle);
         renderer.shutdown();
         System.out.println("[MGI] Done.");
     }
