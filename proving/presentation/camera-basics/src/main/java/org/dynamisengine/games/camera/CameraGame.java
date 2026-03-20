@@ -135,7 +135,7 @@ public final class CameraGame implements WorldApplication {
         renderer.drawCube(vp, -3f, 0.3f, 3f, 0.5f);
 
         // HUD text
-        renderer.drawText("CAMERA BASICS — First 3D", 10, 10, 2.5f, 1f, 1f, 0.3f, w, h);
+        renderer.drawText("CAMERA BASICS - First 3D", 10, 10, 2.5f, 1f, 1f, 0.3f, w, h);
         renderer.drawText(String.format("Yaw: %.0f  Pitch: %.0f  Dist: %.1f", orbitYaw, orbitPitch, orbitDist),
                 10, 35, 2f, 0.7f, 0.8f, 0.7f, w, h);
         renderer.drawText(String.format("Eye: (%.1f, %.1f, %.1f)", camX, camY, camZ),

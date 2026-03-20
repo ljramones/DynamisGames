@@ -159,6 +159,7 @@ public final class Scene3DRenderer {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glUseProgram(progText);
+        glDisableVertexAttribArray(1); // disable 3D color attrib from cube shader
 
         textBuffer.clear();
         int numQuads = STBEasyFont.stb_easy_font_print(0, 0, text, null, textBuffer);
