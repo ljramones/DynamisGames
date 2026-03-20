@@ -28,7 +28,7 @@ import java.util.Map;
  * hit counter, blend from idle→strike→idle.
  *
  * Press Space to strike. The target only reacts when the animation
- * reaches the "hit" event at 0.5s — NOT when Space is pressed.
+ * reaches the "hit" event at 0.5s - NOT when Space is pressed.
  */
 public final class SyncGame implements WorldApplication {
 
@@ -157,16 +157,16 @@ public final class SyncGame implements WorldApplication {
                 strikeTime += dt;
                 strikePlayer.update(dt);
 
-                // Process strike events — THE KEY PART
+                // Process strike events - THE KEY PART
                 for (AnimationEvent evt : strikePlayer.drainEvents()) {
                     float absTime = evt.normalizedTime() * strikeClip.duration();
                     switch (evt.name()) {
                         case "windup" -> {
-                            logEvent("t=%.2f WINDUP — preparing", absTime);
+                            logEvent("t=%.2f WINDUP - preparing", absTime);
                             playSound(330f, 0.08f, 0.001f, 0.02f);
                         }
                         case "hit" -> {
-                            logEvent("t=%.2f HIT — consequence fires!", absTime);
+                            logEvent("t=%.2f HIT - consequence fires!", absTime);
                             // GAMEPLAY CONSEQUENCE: only here, not at input time
                             if (targetState == TargetState.ACTIVE) {
                                 targetState = TargetState.HIT;
@@ -177,7 +177,7 @@ public final class SyncGame implements WorldApplication {
                             }
                         }
                         case "recover" -> {
-                            logEvent("t=%.2f RECOVER — returning", absTime);
+                            logEvent("t=%.2f RECOVER - returning", absTime);
                             playSound(220f, 0.06f, 0.002f, 0.03f);
                         }
                     }
@@ -217,7 +217,7 @@ public final class SyncGame implements WorldApplication {
         renderer.setDirectionalLight(DirectionalLight.SUN, true);
         renderer.setPointLight(new PointLight(0, 3, 2, 0.8f, 0.7f, 1f, 2f, 8f), true);
 
-        // Hero torus — animated
+        // Hero torus - animated
         {
             float posZ, rotX, rotY, scale;
             if (striking) {
