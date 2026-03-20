@@ -16,5 +16,6 @@
     <description>Proves the engine is pleasant to use: debug overlay, telemetry HUD, inspector, editor shell.</description>
 
     <modules>
+        <module>debug-overlay</module>
     </modules>
 </project>
