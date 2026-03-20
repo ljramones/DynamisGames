@@ -1,0 +1,37 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.dynamisengine.games</groupId>
+    <artifactId>dynamis-games</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <relativePath>../../../pom.xml</relativePath>
+  </parent>
+  <artifactId>lightengine-presets-demo</artifactId>
+  <name>LightEngine Presets Demo</name>
+  <description>Scene construction ergonomics via SceneBuilder and preset APIs.</description>
+  <dependencies>
+    <dependency><groupId>org.dynamisengine.worldengine</groupId><artifactId>world-api</artifactId><version>1.0.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>org.dynamisengine.worldengine</groupId><artifactId>world-runtime</artifactId><version>1.0.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>org.dynamisengine.audio</groupId><artifactId>dynamis-audio-api</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>org.dynamisengine.audio</groupId><artifactId>dynamis-audio-core</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>org.dynamisengine.audio</groupId><artifactId>dynamis-audio-dsp</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>org.dynamisengine.audio</groupId><artifactId>dynamis-audio-designer</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>org.dynamisengine.audio</groupId><artifactId>dynamis-audio-simulation</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>org.dynamisengine.audio</groupId><artifactId>dynamis-audio-procedural</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>org.dynamisengine.audio</groupId><artifactId>dynamis-audio-backend-coreaudio</artifactId><version>0.1.0-SNAPSHOT</version><scope>runtime</scope></dependency>
+    <dependency><groupId>org.dynamisengine.window</groupId><artifactId>window-api</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>org.dynamisengine.window</groupId><artifactId>window-glfw</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl</artifactId><version>3.3.4</version><classifier>natives-macos-arm64</classifier><scope>runtime</scope></dependency>
+    <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl-glfw</artifactId><version>3.3.4</version><classifier>natives-macos-arm64</classifier><scope>runtime</scope></dependency>
+    <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl-opengl</artifactId><version>3.3.4</version></dependency>
+    <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl-opengl</artifactId><version>3.3.4</version><classifier>natives-macos-arm64</classifier><scope>runtime</scope></dependency>
+    <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl-stb</artifactId><version>3.3.4</version></dependency>
+    <dependency><groupId>org.lwjgl</groupId><artifactId>lwjgl-stb</artifactId><version>3.3.4</version><classifier>natives-macos-arm64</classifier><scope>runtime</scope></dependency>
+    <dependency><groupId>org.dynamisengine.input</groupId><artifactId>input-api</artifactId><version>1.0.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>org.dynamisengine.input</groupId><artifactId>input-core</artifactId><version>1.0.0-SNAPSHOT</version></dependency>
+    <!-- LightEngine API for presets -->
+    <dependency><groupId>org.dynamisengine.light</groupId><artifactId>engine-api</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+  </dependencies>
+</project>

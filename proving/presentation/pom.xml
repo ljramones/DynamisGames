@@ -26,5 +26,6 @@
         <module>animation-events</module>
         <module>animation-blending</module>
         <module>animation-gameplay-sync</module>
+        <module>lightengine-presets-demo</module>
     </modules>
 </project>
