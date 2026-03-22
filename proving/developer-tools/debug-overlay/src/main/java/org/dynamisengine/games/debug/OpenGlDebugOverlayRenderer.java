@@ -25,6 +25,7 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
     private static final float COLUMN_GAP = 10f;
     private static final float TEXT_SCALE = 1.8f;
     private static final float HEADER_SCALE = 2.0f;
+    private static final float TREND_HEIGHT = 20f;
 
     // Colors
     private static final float[] BG_NORMAL  = {0.0f, 0.0f, 0.0f, 0.75f};
@@ -147,6 +148,23 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
                 y += ROW_HEIGHT;
             }
         }
+
+        // Trends (sparklines)
+        if (!panel.trends().isEmpty()) {
+            y += 4;
+            float trendHeight = TREND_HEIGHT;
+            float trendWidth = box.width() - PANEL_PADDING * 2;
+            for (var trend : panel.trends()) {
+                // Label
+                textRenderer.drawText(trend.metricName(), x, y, TEXT_SCALE * 0.75f,
+                    TEXT_DIM[0], TEXT_DIM[1], TEXT_DIM[2], screenW, screenH);
+                y += ROW_HEIGHT * 0.7f;
+
+                // Sparkline
+                drawTrend(trend, new LayoutBox(x, y, trendWidth, trendHeight));
+                y += trendHeight + 2;
+            }
+        }
     }
 
     @Override
@@ -176,9 +194,35 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
 
     @Override
     public void drawTrend(DebugMiniTrend trend, LayoutBox box) {
-        // Phase 2 — placeholder
-        textRenderer.drawText(trend.metricName() + " [trend]", box.x(), box.y(), TEXT_SCALE * 0.8f,
-            TEXT_DIM[0], TEXT_DIM[1], TEXT_DIM[2], screenW, screenH);
+        var values = trend.values();
+        if (values.size() < 2) return;
+
+        // Background
+        textRenderer.drawRect(box.x(), box.y(), box.width(), box.height(),
+            0.05f, 0.05f, 0.08f, 0.9f, screenW, screenH);
+
+        // Normalize values to box height
+        double range = trend.max() - trend.min();
+        if (range < 0.0001) range = 1.0; // avoid division by zero
+
+        float stepX = box.width() / (values.size() - 1);
+
+        // Draw sparkline segments
+        for (int i = 1; i < values.size(); i++) {
+            float x0 = box.x() + (i - 1) * stepX;
+            float x1 = box.x() + i * stepX;
+            float norm0 = (float) ((values.get(i - 1) - trend.min()) / range);
+            float norm1 = (float) ((values.get(i) - trend.min()) / range);
+            float y0 = box.y() + box.height() - norm0 * box.height();
+            float y1 = box.y() + box.height() - norm1 * box.height();
+
+            // Color: green for low values, yellow for mid, red for high
+            float t = (norm0 + norm1) * 0.5f;
+            float r = Math.min(1f, t * 2f);
+            float g = Math.min(1f, (1f - t) * 2f);
+
+            textRenderer.drawLine(x0, y0, x1, y1, r, g, 0.2f, screenW, screenH);
+        }
     }
 
     @Override
@@ -199,6 +243,14 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
         int lines = 1; // title
         lines += panel.rows().size();
         lines += panel.flags().isEmpty() ? 0 : panel.flags().size();
-        return PANEL_PADDING * 2 + lines * ROW_HEIGHT + 4;
+        float height = PANEL_PADDING * 2 + lines * ROW_HEIGHT + 4;
+
+        // Add space for trends: label + sparkline per trend
+        if (!panel.trends().isEmpty()) {
+            height += 4; // gap before trends
+            height += panel.trends().size() * (ROW_HEIGHT * 0.7f + TREND_HEIGHT + 2);
+        }
+
+        return height;
     }
 }

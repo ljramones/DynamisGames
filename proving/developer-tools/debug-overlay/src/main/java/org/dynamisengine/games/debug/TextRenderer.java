@@ -191,6 +191,42 @@ public final class TextRenderer {
         buf.putFloat(x).putFloat(y).putFloat(0f).putInt(0); // x, y, z, color (unused)
     }
 
+    /**
+     * Draw a line between two pixel coordinates.
+     */
+    public void drawLine(float x0, float y0, float x1, float y1,
+                          float r, float g, float b, int screenW, int screenH) {
+        if (!initialized) return;
+
+        // Line as a thin quad (2px wide)
+        float dx = x1 - x0, dy = y1 - y0;
+        float len = (float) Math.sqrt(dx * dx + dy * dy);
+        if (len < 0.001f) return;
+        float nx = -dy / len, ny = dx / len; // perpendicular
+        float hw = 1.0f; // half-width in pixels
+
+        vertexBuffer.clear();
+        putVertex(vertexBuffer, x0 + nx * hw, y0 + ny * hw);
+        putVertex(vertexBuffer, x0 - nx * hw, y0 - ny * hw);
+        putVertex(vertexBuffer, x1 - nx * hw, y1 - ny * hw);
+        putVertex(vertexBuffer, x0 + nx * hw, y0 + ny * hw);
+        putVertex(vertexBuffer, x1 - nx * hw, y1 - ny * hw);
+        putVertex(vertexBuffer, x1 + nx * hw, y1 + ny * hw);
+        vertexBuffer.flip();
+
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, vertexBuffer, GL_STREAM_DRAW);
+
+        glUniform3f(uColor, r, g, b);
+
+        float[] proj = orthoMatrix(0, screenW, screenH, 0, -1, 1);
+        glUniformMatrix4fv(uProjection, false, proj);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+    }
+
     public void endFrame() {
         if (!initialized) return;
         glDisable(GL_BLEND);
