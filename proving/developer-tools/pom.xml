@@ -21,5 +21,6 @@
         <module>debug-history-timeline</module>
         <module>debug-correlation-basics</module>
         <module>debug-watchdog-basics</module>
+        <module>debug-session-queries</module>
     </modules>
 </project>
