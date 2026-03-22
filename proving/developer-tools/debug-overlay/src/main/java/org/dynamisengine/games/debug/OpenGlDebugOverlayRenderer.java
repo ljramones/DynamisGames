@@ -1,0 +1,204 @@
+package org.dynamisengine.games.debug;
+
+import org.dynamisengine.ui.debug.model.*;
+import org.dynamisengine.ui.debug.render.DebugOverlayRenderer;
+
+import java.util.List;
+
+/**
+ * Minimal OpenGL implementation of {@link DebugOverlayRenderer}.
+ *
+ * <p>Uses the proving module's {@link TextRenderer} for text and filled rects.
+ * This is a Phase 1 renderer — layout is simple column-based positioning,
+ * not a full layout engine.
+ *
+ * <p>Lives in the proving module because it depends on LWJGL. A production
+ * renderer would live in DynamisLightEngine.
+ */
+final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
+
+    // Layout constants
+    private static final float PANEL_WIDTH = 280f;
+    private static final float PANEL_PADDING = 8f;
+    private static final float ROW_HEIGHT = 14f;
+    private static final float PANEL_GAP = 6f;
+    private static final float COLUMN_GAP = 10f;
+    private static final float TEXT_SCALE = 1.8f;
+    private static final float HEADER_SCALE = 2.0f;
+
+    // Colors
+    private static final float[] BG_NORMAL  = {0.0f, 0.0f, 0.0f, 0.75f};
+    private static final float[] BG_WARNING = {0.15f, 0.12f, 0.0f, 0.8f};
+    private static final float[] BG_ERROR   = {0.2f, 0.05f, 0.05f, 0.85f};
+    private static final float[] TEXT_NORMAL  = {0.7f, 0.8f, 0.7f};
+    private static final float[] TEXT_WARNING = {1.0f, 0.8f, 0.2f};
+    private static final float[] TEXT_ERROR   = {1.0f, 0.3f, 0.3f};
+    private static final float[] TEXT_HEADER  = {0.3f, 1.0f, 0.6f};
+    private static final float[] TEXT_DIM     = {0.5f, 0.55f, 0.5f};
+    private static final float[] FLAG_OK      = {0.4f, 0.5f, 0.4f};
+    private static final float[] FLAG_ACTIVE  = {0.3f, 0.9f, 0.3f};
+    private static final float[] FLAG_WARN    = {0.9f, 0.7f, 0.2f};
+    private static final float[] FLAG_ERR     = {0.9f, 0.2f, 0.2f};
+
+    private final TextRenderer textRenderer;
+    private int screenW, screenH;
+
+    OpenGlDebugOverlayRenderer(TextRenderer textRenderer) {
+        this.textRenderer = textRenderer;
+    }
+
+    /**
+     * Renders all panels with simple two-column layout.
+     * TOP panels span the full width at the top.
+     * GRID panels flow in two columns.
+     * BOTTOM panels go at the bottom.
+     */
+    void renderPanels(List<DebugOverlayPanel> panels, int screenW, int screenH) {
+        this.screenW = screenW;
+        this.screenH = screenH;
+
+        beginOverlay();
+
+        float startX = 8f;
+        float y = 8f;
+
+        // TOP panels (full width)
+        for (var panel : panels) {
+            if (panel.region() != PanelRegion.TOP) continue;
+            float h = panelHeight(panel);
+            LayoutBox box = new LayoutBox(startX, y, PANEL_WIDTH * 2 + COLUMN_GAP, h);
+            drawPanel(panel, box);
+            y += h + PANEL_GAP;
+        }
+
+        // GRID panels (two columns)
+        float col1X = startX;
+        float col2X = startX + PANEL_WIDTH + COLUMN_GAP;
+        float col1Y = y, col2Y = y;
+        boolean useCol1 = true;
+
+        for (var panel : panels) {
+            if (panel.region() != PanelRegion.GRID) continue;
+            float h = panelHeight(panel);
+            if (useCol1) {
+                drawPanel(panel, new LayoutBox(col1X, col1Y, PANEL_WIDTH, h));
+                col1Y += h + PANEL_GAP;
+            } else {
+                drawPanel(panel, new LayoutBox(col2X, col2Y, PANEL_WIDTH, h));
+                col2Y += h + PANEL_GAP;
+            }
+            useCol1 = !useCol1;
+        }
+
+        // BOTTOM panels
+        float bottomY = Math.max(col1Y, col2Y) + PANEL_GAP;
+        for (var panel : panels) {
+            if (panel.region() != PanelRegion.BOTTOM) continue;
+            float h = panelHeight(panel);
+            drawPanel(panel, new LayoutBox(startX, bottomY, PANEL_WIDTH * 2 + COLUMN_GAP, h));
+            bottomY += h + PANEL_GAP;
+        }
+
+        endOverlay();
+    }
+
+    @Override
+    public void beginOverlay() {
+        textRenderer.beginFrame(screenW, screenH);
+    }
+
+    @Override
+    public void drawPanel(DebugOverlayPanel panel, LayoutBox box) {
+        // Background
+        float[] bg = switch (panel.severity()) {
+            case WARNING -> BG_WARNING;
+            case ERROR -> BG_ERROR;
+            default -> BG_NORMAL;
+        };
+        textRenderer.drawRect(box.x(), box.y(), box.width(), box.height(),
+            bg[0], bg[1], bg[2], bg[3], screenW, screenH);
+
+        // Highlighted panels get a brighter left border
+        if (panel.highlighted()) {
+            textRenderer.drawRect(box.x(), box.y(), 3f, box.height(),
+                1f, 0.8f, 0.2f, 1f, screenW, screenH);
+        }
+
+        float x = box.x() + PANEL_PADDING;
+        float y = box.y() + PANEL_PADDING;
+
+        // Title
+        float[] titleColor = panel.highlighted() ? TEXT_WARNING : TEXT_HEADER;
+        textRenderer.drawText(panel.title(), x, y, HEADER_SCALE,
+            titleColor[0], titleColor[1], titleColor[2], screenW, screenH);
+        y += ROW_HEIGHT + 2;
+
+        // Rows
+        for (var row : panel.rows()) {
+            drawRow(row, x, y, box.width() - PANEL_PADDING * 2);
+            y += ROW_HEIGHT;
+        }
+
+        // Flags
+        if (!panel.flags().isEmpty()) {
+            y += 2;
+            for (var flag : panel.flags()) {
+                drawFlag(flag, x, y);
+                y += ROW_HEIGHT;
+            }
+        }
+    }
+
+    @Override
+    public void drawRow(DebugOverlayRow row, float x, float y, float width) {
+        float[] color = switch (row.severity()) {
+            case WARNING -> TEXT_WARNING;
+            case ERROR -> TEXT_ERROR;
+            default -> TEXT_NORMAL;
+        };
+        String line = row.label() + ": " + row.value();
+        textRenderer.drawText(line, x, y, TEXT_SCALE,
+            color[0], color[1], color[2], screenW, screenH);
+    }
+
+    @Override
+    public void drawFlag(DebugFlagView flag, float x, float y) {
+        float[] color = switch (flag.state()) {
+            case ACTIVE -> FLAG_ACTIVE;
+            case WARNING -> FLAG_WARN;
+            case ERROR -> FLAG_ERR;
+            default -> FLAG_OK;
+        };
+        String text = "[" + flag.state().name() + "] " + flag.name();
+        textRenderer.drawText(text, x, y, TEXT_SCALE * 0.9f,
+            color[0], color[1], color[2], screenW, screenH);
+    }
+
+    @Override
+    public void drawTrend(DebugMiniTrend trend, LayoutBox box) {
+        // Phase 2 — placeholder
+        textRenderer.drawText(trend.metricName() + " [trend]", box.x(), box.y(), TEXT_SCALE * 0.8f,
+            TEXT_DIM[0], TEXT_DIM[1], TEXT_DIM[2], screenW, screenH);
+    }
+
+    @Override
+    public void drawText(String text, float x, float y, int argbColor) {
+        float a = ((argbColor >> 24) & 0xFF) / 255f;
+        float r = ((argbColor >> 16) & 0xFF) / 255f;
+        float g = ((argbColor >> 8) & 0xFF) / 255f;
+        float b = (argbColor & 0xFF) / 255f;
+        textRenderer.drawText(text, x, y, TEXT_SCALE, r * a, g * a, b * a, screenW, screenH);
+    }
+
+    @Override
+    public void endOverlay() {
+        textRenderer.endFrame();
+    }
+
+    private float panelHeight(DebugOverlayPanel panel) {
+        int lines = 1; // title
+        lines += panel.rows().size();
+        lines += panel.flags().isEmpty() ? 0 : panel.flags().size();
+        return PANEL_PADDING * 2 + lines * ROW_HEIGHT + 4;
+    }
+}

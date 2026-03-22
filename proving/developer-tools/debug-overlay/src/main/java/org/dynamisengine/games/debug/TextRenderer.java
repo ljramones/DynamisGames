@@ -152,6 +152,45 @@ public final class TextRenderer {
         glBindVertexArray(0);
     }
 
+    /**
+     * Draw a filled rectangle at pixel coordinates.
+     */
+    public void drawRect(float x, float y, float width, float height,
+                          float r, float g, float b, float a, int screenW, int screenH) {
+        if (!initialized) return;
+
+        // Build a single quad as 2 triangles in a temporary buffer
+        float x0 = x, y0 = y, x1 = x + width, y1 = y + height;
+        // We reuse the vertex buffer with 6 vertices (2 triangles), stride=16 bytes
+        vertexBuffer.clear();
+        // Triangle 1: top-left, top-right, bottom-right
+        putVertex(vertexBuffer, x0, y0);
+        putVertex(vertexBuffer, x1, y0);
+        putVertex(vertexBuffer, x1, y1);
+        // Triangle 2: top-left, bottom-right, bottom-left
+        putVertex(vertexBuffer, x0, y0);
+        putVertex(vertexBuffer, x1, y1);
+        putVertex(vertexBuffer, x0, y1);
+        vertexBuffer.flip();
+
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, vertexBuffer, GL_STREAM_DRAW);
+
+        glUniform3f(uColor, r * a, g * a, b * a);
+
+        // Identity-like projection that maps pixel coords to NDC
+        float[] proj = orthoMatrix(0, screenW, screenH, 0, -1, 1);
+        glUniformMatrix4fv(uProjection, false, proj);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+    }
+
+    private static void putVertex(ByteBuffer buf, float x, float y) {
+        buf.putFloat(x).putFloat(y).putFloat(0f).putInt(0); // x, y, z, color (unused)
+    }
+
     public void endFrame() {
         if (!initialized) return;
         glDisable(GL_BLEND);

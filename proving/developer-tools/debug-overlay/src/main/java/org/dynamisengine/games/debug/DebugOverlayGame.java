@@ -18,7 +18,7 @@ import org.dynamisengine.worldengine.api.GameContext;
 import org.dynamisengine.worldengine.api.WorldApplication;
 import org.dynamisengine.worldengine.api.telemetry.*;
 
-import org.dynamisengine.ui.debug.model.*;
+import org.dynamisengine.ui.debug.model.DebugOverlayPanel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,6 +64,7 @@ public final class DebugOverlayGame implements WorldApplication {
     private final AudioSubsystem audioSub;
     private final TextRenderer textRenderer = new TextRenderer();
     private final DebugSpineOverlay spineOverlay = new DebugSpineOverlay();
+    private OpenGlDebugOverlayRenderer overlayRenderer;
 
     private boolean overlayVisible = true;
     private boolean spineVisible = false;
@@ -89,6 +90,7 @@ public final class DebugOverlayGame implements WorldApplication {
     @Override
     public void initialize(GameContext context) {
         textRenderer.initialize();
+        overlayRenderer = new OpenGlDebugOverlayRenderer(textRenderer);
         System.out.println("=== Debug Overlay ===");
         System.out.println("Live engine telemetry HUD.");
         System.out.println("Space=spawn particles, Tab=toggle overlay, 2=toggle spine overlay, Esc=quit");
@@ -265,7 +267,7 @@ public final class DebugOverlayGame implements WorldApplication {
             textRenderer.endFrame();
         }
 
-        // === DynamisDebug Spine Overlay ===
+        // === DynamisDebug Spine Overlay (rendered via SPI) ===
         if (spineVisible) {
             WorldTelemetrySnapshot snapshot = context.telemetry();
             long tick = snapshot != null && snapshot.engine() != null ? snapshot.engine().tick() : 0;
@@ -277,54 +279,7 @@ public final class DebugOverlayGame implements WorldApplication {
             );
 
             List<DebugOverlayPanel> panels = spineOverlay.update(snapshot, tick, ecsMetrics);
-
-            // Render spine panels as text on the right side of the screen
-            textRenderer.beginFrame(w, h);
-            float px = w * 0.55f; // right half
-            float py = 10f;
-            float scale = 1.8f;
-            float lineH = 15f;
-
-            textRenderer.drawText("=== DEBUG SPINE OVERLAY ===", px, py, 2.0f, 0.3f, 1f, 0.6f, w, h);
-            py += lineH + 4;
-
-            for (DebugOverlayPanel panel : panels) {
-                // Panel header with severity color
-                float pr = 0.7f, pg = 0.8f, pb = 0.7f;
-                if (panel.severity() == PanelSeverity.WARNING) { pr = 1f; pg = 0.8f; pb = 0.2f; }
-                if (panel.severity() == PanelSeverity.ERROR) { pr = 1f; pg = 0.3f; pb = 0.3f; }
-
-                String regionTag = panel.region() == PanelRegion.TOP ? "[TOP] " :
-                                   panel.region() == PanelRegion.BOTTOM ? "[BOT] " : "";
-                String highlight = panel.highlighted() ? " *" : "";
-                textRenderer.drawText(regionTag + panel.title() + highlight, px, py, scale, pr, pg, pb, w, h);
-                py += lineH;
-
-                // Rows
-                for (DebugOverlayRow row : panel.rows()) {
-                    float rr = 0.6f, rg = 0.7f, rb = 0.6f;
-                    if (row.severity() == RowSeverity.WARNING) { rr = 0.9f; rg = 0.7f; rb = 0.2f; }
-                    if (row.severity() == RowSeverity.ERROR) { rr = 0.9f; rg = 0.2f; rb = 0.2f; }
-                    textRenderer.drawText("  " + row.label() + ": " + row.value(),
-                            px, py, scale * 0.9f, rr, rg, rb, w, h);
-                    py += lineH;
-                }
-
-                // Flags
-                for (var flag : panel.flags()) {
-                    float fr = 0.5f, fg2 = 0.5f, fb = 0.5f;
-                    if (flag.state() == FlagState.ACTIVE) { fr = 0.3f; fg2 = 0.9f; fb = 0.3f; }
-                    if (flag.state() == FlagState.WARNING) { fr = 0.9f; fg2 = 0.7f; fb = 0.2f; }
-                    if (flag.state() == FlagState.ERROR) { fr = 0.9f; fg2 = 0.2f; fb = 0.2f; }
-                    textRenderer.drawText("  [" + flag.state() + "] " + flag.name(),
-                            px, py, scale * 0.85f, fr, fg2, fb, w, h);
-                    py += lineH;
-                }
-
-                py += 3; // panel gap
-            }
-
-            textRenderer.endFrame();
+            overlayRenderer.renderPanels(panels, w, h);
         }
 
         windowSub.window().swapBuffers();
