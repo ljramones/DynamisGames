@@ -1,0 +1,69 @@
+package org.dynamisengine.games.debugdraw;
+
+import org.dynamisengine.input.api.frame.InputFrame;
+import org.dynamisengine.input.core.DefaultInputProcessor;
+import org.dynamisengine.input.core.InputDeviceManager;
+import org.dynamisengine.window.api.InputEvent;
+import org.dynamisengine.window.api.WindowEvents;
+import org.dynamisengine.worldengine.api.WorldContext;
+import org.dynamisengine.worldengine.api.lifecycle.DynamisInitException;
+import org.dynamisengine.worldengine.api.lifecycle.DynamisShutdownException;
+import org.dynamisengine.worldengine.api.lifecycle.DynamisTickException;
+import org.dynamisengine.worldengine.api.telemetry.SubsystemHealth;
+import org.dynamisengine.worldengine.api.telemetry.WorldTelemetrySnapshot;
+import org.dynamisengine.worldengine.runtime.subsystem.WorldSubsystem;
+
+import java.util.Optional;
+import java.util.Set;
+
+final class WindowInputSubsystem implements WorldSubsystem {
+
+    private final WindowSubsystem windowSubsystem;
+    private final DefaultInputProcessor processor;
+    private final InputDeviceManager deviceManager;
+    private volatile boolean initialized = false;
+    private volatile long lastTick = -1;
+    private volatile InputFrame lastFrame;
+
+    WindowInputSubsystem(WindowSubsystem windowSubsystem, DefaultInputProcessor processor) {
+        this.windowSubsystem = windowSubsystem;
+        this.processor = processor;
+        this.deviceManager = new InputDeviceManager(4);
+    }
+
+    @Override public String name() { return WorldTelemetrySnapshot.INPUT; }
+    @Override public Set<String> dependencies() { return Set.of("Window"); }
+
+    @Override
+    public void initialize(WorldContext context) throws DynamisInitException {
+        initialized = true;
+    }
+
+    @Override public void start() {}
+
+    @Override
+    public void tick(long tick, float deltaSeconds) throws DynamisTickException {
+        lastTick = tick;
+        deviceManager.beginTick();
+        WindowEvents events = windowSubsystem.lastEvents();
+        for (InputEvent event : events.inputEvents()) {
+            deviceManager.processEvent(event);
+            processor.feed(event, tick);
+        }
+        lastFrame = processor.snapshot(tick);
+    }
+
+    @Override public void stop() {}
+    @Override public void shutdown() { initialized = false; }
+
+    @Override
+    public SubsystemHealth health() {
+        if (!initialized) return SubsystemHealth.absent(name());
+        return SubsystemHealth.healthy(name(), lastTick);
+    }
+
+    @Override
+    public Optional<Object> captureTelemetry() { return Optional.empty(); }
+
+    InputFrame lastFrame() { return lastFrame; }
+}

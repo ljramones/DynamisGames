@@ -17,5 +17,6 @@
 
     <modules>
         <module>debug-overlay</module>
+        <module>debug-draw-basics</module>
     </modules>
 </project>
