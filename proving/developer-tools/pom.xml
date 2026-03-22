@@ -18,5 +18,6 @@
     <modules>
         <module>debug-overlay</module>
         <module>debug-draw-basics</module>
+        <module>debug-history-timeline</module>
     </modules>
 </project>
