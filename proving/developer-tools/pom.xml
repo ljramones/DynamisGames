@@ -22,5 +22,6 @@
         <module>debug-correlation-basics</module>
         <module>debug-watchdog-basics</module>
         <module>debug-session-queries</module>
+        <module>debug-subsystem-showcase</module>
     </modules>
 </project>
