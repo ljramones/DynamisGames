@@ -119,5 +119,37 @@
       <artifactId>input-core</artifactId>
       <version>1.0.0-SNAPSHOT</version>
     </dependency>
+    <!-- DynamisDebug spine -->
+    <dependency>
+      <groupId>org.dynamisengine.debug</groupId>
+      <artifactId>dynamisdebug-api</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.dynamisengine.debug</groupId>
+      <artifactId>dynamisdebug-core</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.dynamisengine.debug</groupId>
+      <artifactId>dynamisdebug-bridge</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+    <!-- DynamisUI debug overlay -->
+    <dependency>
+      <groupId>org.dynamisengine.ui</groupId>
+      <artifactId>ui-api</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.dynamisengine.ui</groupId>
+      <artifactId>ui-core</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.dynamisengine.ui</groupId>
+      <artifactId>ui-debug</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 </project>
