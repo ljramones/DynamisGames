@@ -20,5 +20,6 @@
         <module>debug-draw-basics</module>
         <module>debug-history-timeline</module>
         <module>debug-correlation-basics</module>
+        <module>debug-watchdog-basics</module>
     </modules>
 </project>
