@@ -140,7 +140,7 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
         // Title
         if (compact) {
             // Compact: title + "no data" on same line, dimmer
-            textRenderer.drawText(panel.title() + " — no data", x, y, TEXT_SCALE,
+            textRenderer.drawText(panel.title() + " - no data", x, y, TEXT_SCALE,
                 TEXT_DIM[0], TEXT_DIM[1], TEXT_DIM[2], screenW, screenH);
             return; // nothing more to draw
         }
