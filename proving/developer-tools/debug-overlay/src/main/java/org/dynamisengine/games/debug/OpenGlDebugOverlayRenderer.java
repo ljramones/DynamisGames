@@ -25,7 +25,9 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
     private static final float COLUMN_GAP = 10f;
     private static final float TEXT_SCALE = 1.8f;
     private static final float HEADER_SCALE = 2.0f;
-    private static final float TREND_HEIGHT = 20f;
+    private static final float TREND_HEIGHT = 24f;
+    private static final float COMPACT_HEIGHT = 30f;
+    private static final float MAX_ALERT_HEIGHT = 80f;
 
     // Colors
     private static final float[] BG_NORMAL  = {0.0f, 0.0f, 0.0f, 0.75f};
@@ -110,12 +112,19 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
 
     @Override
     public void drawPanel(DebugOverlayPanel panel, LayoutBox box) {
-        // Background
-        float[] bg = switch (panel.severity()) {
-            case WARNING -> BG_WARNING;
-            case ERROR -> BG_ERROR;
-            default -> BG_NORMAL;
-        };
+        boolean compact = isEmpty(panel);
+
+        // Background — dimmer for empty panels
+        float[] bg;
+        if (compact) {
+            bg = new float[]{0.0f, 0.0f, 0.0f, 0.4f};
+        } else {
+            bg = switch (panel.severity()) {
+                case WARNING -> BG_WARNING;
+                case ERROR -> BG_ERROR;
+                default -> BG_NORMAL;
+            };
+        }
         textRenderer.drawRect(box.x(), box.y(), box.width(), box.height(),
             bg[0], bg[1], bg[2], bg[3], screenW, screenH);
 
@@ -126,9 +135,16 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
         }
 
         float x = box.x() + PANEL_PADDING;
-        float y = box.y() + PANEL_PADDING;
+        float y = box.y() + (compact ? 4f : PANEL_PADDING);
 
         // Title
+        if (compact) {
+            // Compact: title + "no data" on same line, dimmer
+            textRenderer.drawText(panel.title() + " — no data", x, y, TEXT_SCALE,
+                TEXT_DIM[0], TEXT_DIM[1], TEXT_DIM[2], screenW, screenH);
+            return; // nothing more to draw
+        }
+
         float[] titleColor = panel.highlighted() ? TEXT_WARNING : TEXT_HEADER;
         textRenderer.drawText(panel.title(), x, y, HEADER_SCALE,
             titleColor[0], titleColor[1], titleColor[2], screenW, screenH);
@@ -247,16 +263,33 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
         textRenderer.endFrame();
     }
 
+    private boolean isEmpty(DebugOverlayPanel panel) {
+        return panel.rows().size() <= 1
+            && panel.flags().isEmpty()
+            && panel.trends().isEmpty()
+            && panel.rows().stream().anyMatch(r -> "no data".equals(r.value()));
+    }
+
     private float panelHeight(DebugOverlayPanel panel) {
+        // Compact empty panels: title + one "no data" row, minimal padding
+        if (isEmpty(panel)) {
+            return COMPACT_HEIGHT;
+        }
+
         int lines = 1; // title
         lines += panel.rows().size();
         lines += panel.flags().isEmpty() ? 0 : panel.flags().size();
         float height = PANEL_PADDING * 2 + lines * ROW_HEIGHT + 4;
 
-        // Add space for trends: label + sparkline per trend
+        // Trends: label + sparkline per trend, with breathing room
         if (!panel.trends().isEmpty()) {
-            height += 4; // gap before trends
-            height += panel.trends().size() * (ROW_HEIGHT * 0.7f + TREND_HEIGHT + 2);
+            height += 6; // gap before trends
+            height += panel.trends().size() * (ROW_HEIGHT * 0.7f + TREND_HEIGHT + 4);
+        }
+
+        // Cap alert panel height
+        if (panel.region() == PanelRegion.TOP && height > MAX_ALERT_HEIGHT) {
+            height = MAX_ALERT_HEIGHT;
         }
 
         return height;
