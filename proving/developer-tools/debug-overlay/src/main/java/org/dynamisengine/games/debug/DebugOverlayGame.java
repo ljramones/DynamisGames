@@ -1,7 +1,7 @@
 package org.dynamisengine.games.debug;
 
 import org.dynamisengine.audio.api.AcousticConstants;
-import org.dynamisengine.audio.dsp.device.AudioTelemetry;
+import org.dynamisengine.audio.api.AcousticConstants;
 import org.dynamisengine.audio.procedural.*;
 import org.dynamisengine.core.entity.EntityId;
 import org.dynamisengine.ecs.api.component.ComponentKey;
@@ -13,12 +13,10 @@ import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.input.api.context.InputMap;
 import org.dynamisengine.input.api.frame.InputFrame;
 import org.dynamisengine.input.core.DefaultInputProcessor;
-import org.dynamisengine.input.core.InputTelemetry;
+import org.dynamisengine.ui.debug.model.DebugOverlayPanel;
 import org.dynamisengine.worldengine.api.GameContext;
 import org.dynamisengine.worldengine.api.WorldApplication;
-import org.dynamisengine.worldengine.api.telemetry.*;
-
-import org.dynamisengine.ui.debug.model.DebugOverlayPanel;
+import org.dynamisengine.worldengine.api.telemetry.WorldTelemetrySnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,10 +52,9 @@ public final class DebugOverlayGame implements WorldApplication {
     // Input
     static final ActionId SPAWN = new ActionId("spawn");
     static final ActionId TOGGLE = new ActionId("toggle");
-    static final ActionId TOGGLE_SPINE = new ActionId("toggleSpine");
     static final ActionId QUIT = new ActionId("quit");
     private static final ContextId CTX = new ContextId("debug");
-    private static final int KEY_SPACE = 32, KEY_TAB = 258, KEY_ESC = 256, KEY_2 = 50;
+    private static final int KEY_SPACE = 32, KEY_TAB = 258, KEY_ESC = 256;
 
     private final WindowSubsystem windowSub;
     private final WindowInputSubsystem inputSub;
@@ -67,7 +64,6 @@ public final class DebugOverlayGame implements WorldApplication {
     private OpenGlDebugOverlayRenderer overlayRenderer;
 
     private boolean overlayVisible = true;
-    private boolean spineVisible = false;
     private int particlesSpawned = 0;
 
     public DebugOverlayGame(WindowSubsystem w, WindowInputSubsystem i, AudioSubsystem a) {
@@ -78,7 +74,6 @@ public final class DebugOverlayGame implements WorldApplication {
         InputMap map = new InputMap(CTX,
                 Map.of(SPAWN, List.of(new KeyBinding(KEY_SPACE, 0)),
                         TOGGLE, List.of(new KeyBinding(KEY_TAB, 0)),
-                        TOGGLE_SPINE, List.of(new KeyBinding(KEY_2, 0)),
                         QUIT, List.of(new KeyBinding(KEY_ESC, 0))),
                 Map.of(),
                 false);
@@ -93,7 +88,7 @@ public final class DebugOverlayGame implements WorldApplication {
         overlayRenderer = new OpenGlDebugOverlayRenderer(textRenderer);
         System.out.println("=== Debug Overlay ===");
         System.out.println("Live engine telemetry HUD.");
-        System.out.println("Space=spawn particles, Tab=toggle overlay, 2=toggle spine overlay, Esc=quit");
+        System.out.println("Space=spawn particles  Tab=toggle overlay  Esc=quit");
     }
 
     @Override
@@ -104,10 +99,9 @@ public final class DebugOverlayGame implements WorldApplication {
         World world = context.ecsWorld();
 
         if (frame.pressed(QUIT)) { context.requestStop(); return; }
-        if (frame.pressed(TOGGLE)) overlayVisible = !overlayVisible;
-        if (frame.pressed(TOGGLE_SPINE)) {
-            spineVisible = !spineVisible;
-            System.out.println("Spine overlay: " + (spineVisible ? "ON" : "OFF"));
+        if (frame.pressed(TOGGLE)) {
+            overlayVisible = !overlayVisible;
+            System.out.println("Overlay: " + (overlayVisible ? "ON" : "OFF"));
         }
 
         // Spawn burst of particles for load generation
@@ -172,103 +166,8 @@ public final class DebugOverlayGame implements WorldApplication {
         }
         glDisable(GL_SCISSOR_TEST);
 
-        // Draw debug overlay
+        // === Debug Overlay (sole rendering path) ===
         if (overlayVisible) {
-            textRenderer.beginFrame(w, h);
-            float s = 2.0f; // scale
-            float y = 10;
-            float lineH = 18;
-
-            textRenderer.drawText("=== DYNAMIS DEBUG OVERLAY ===", 10, y, s, 1f, 1f, 0.3f, w, h);
-            y += lineH + 4;
-
-            // Engine telemetry
-            WorldTelemetrySnapshot snapshot = context.telemetry();
-            if (snapshot != null) {
-                EngineTelemetry eng = snapshot.engine();
-                if (eng != null) {
-                    textRenderer.drawText(String.format("Engine: %s  Tick: %d  Uptime: %.1fs",
-                            eng.state(), eng.tick(), eng.uptimeSeconds()), 10, y, s, 0.8f, 0.9f, 0.8f, w, h);
-                    y += lineH;
-                    textRenderer.drawText(String.format("Frame: %.2fms (avg %.2f, max %.2f)  Budget: %.0f%%",
-                            eng.lastTickDurationMs(), eng.avgTickDurationMs(), eng.maxTickDurationMs(),
-                            eng.budgetPercent()), 10, y, s, 0.7f, 0.8f, 0.7f, w, h);
-                    y += lineH;
-                    textRenderer.drawText(String.format("Target: %dHz (%.2fms)",
-                            eng.tickRate(), eng.targetTickMs()), 10, y, s, 0.6f, 0.7f, 0.6f, w, h);
-                    y += lineH + 4;
-                }
-
-                // Subsystem health
-                textRenderer.drawText("--- Subsystems ---", 10, y, s, 0.9f, 0.9f, 0.5f, w, h);
-                y += lineH;
-                for (var entry : snapshot.subsystems().entrySet()) {
-                    SubsystemTelemetry sub = entry.getValue();
-                    SubsystemHealth health = sub.health();
-                    float r, g, b;
-                    switch (health.state()) {
-                        case HEALTHY -> { r = 0.3f; g = 0.9f; b = 0.3f; }
-                        case DEGRADED -> { r = 0.9f; g = 0.7f; b = 0.2f; }
-                        case FAULTED -> { r = 0.9f; g = 0.2f; b = 0.2f; }
-                        default -> { r = 0.5f; g = 0.5f; b = 0.5f; }
-                    }
-                    String line = String.format("  %s: %s", health.name(), health.state());
-                    if (health.lastError() != null) line += " — " + health.lastError();
-                    textRenderer.drawText(line, 10, y, s, r, g, b, w, h);
-                    y += lineH;
-
-                    // Audio detail
-                    if (sub.hasDetail()) {
-                        Object detail = sub.detail();
-                        if (detail instanceof AudioTelemetry audio) {
-                            textRenderer.drawText(String.format("    %s | %s | DSP: %.0f%% | Ring: %.0f%% | U:%d O:%d",
-                                    audio.backendName(), audio.deviceDescription(),
-                                    audio.dspBudgetPercent(), audio.ringFillPercent(),
-                                    audio.ringUnderruns(), audio.ringOverruns()),
-                                    10, y, 1.8f, 0.6f, 0.7f, 0.8f, w, h);
-                            y += lineH;
-                        } else if (detail instanceof InputTelemetry input) {
-                            textRenderer.drawText(String.format("    Devices: %d | Events: %d | Snapshots: %d",
-                                    input.connectedDevices().size(),
-                                    input.totalEventsProcessed(),
-                                    input.totalSnapshots()),
-                                    10, y, 1.8f, 0.6f, 0.7f, 0.8f, w, h);
-                            y += lineH;
-                        }
-                    }
-                }
-                y += 4;
-
-                // Summary
-                textRenderer.drawText(String.format("Healthy: %d  Degraded: %d  Faulted: %d",
-                        snapshot.healthyCount(), snapshot.degradedCount(), snapshot.faultedCount()),
-                        10, y, s, 0.7f, 0.7f, 0.7f, w, h);
-                y += lineH + 4;
-            }
-
-            // ECS stats
-            int entityCount = world.entities().size();
-            textRenderer.drawText(String.format("--- ECS ---  Entities: %d  Particles: %d (total spawned: %d)",
-                    entityCount, particleCount, particlesSpawned), 10, y, s, 0.9f, 0.9f, 0.5f, w, h);
-            y += lineH + 4;
-
-            // Runtime
-            Runtime rt = Runtime.getRuntime();
-            long usedMB = (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024);
-            long maxMB = rt.maxMemory() / (1024 * 1024);
-            textRenderer.drawText(String.format("--- JVM ---  Heap: %dMB / %dMB  Processors: %d",
-                    usedMB, maxMB, rt.availableProcessors()), 10, y, s, 0.9f, 0.9f, 0.5f, w, h);
-            y += lineH + 4;
-
-            // Controls
-            textRenderer.drawText("Space=spawn  Tab=legacy overlay  2=spine overlay  Esc=quit",
-                    10, h - 25, 1.8f, 0.4f, 0.4f, 0.5f, w, h);
-
-            textRenderer.endFrame();
-        }
-
-        // === DynamisDebug Spine Overlay (rendered via SPI) ===
-        if (spineVisible) {
             WorldTelemetrySnapshot snapshot = context.telemetry();
             long tick = snapshot != null && snapshot.engine() != null ? snapshot.engine().tick() : 0;
 

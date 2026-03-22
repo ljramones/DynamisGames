@@ -175,8 +175,16 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
             default -> TEXT_NORMAL;
         };
         String line = row.label() + ": " + row.value();
+        line = truncate(line, width);
         textRenderer.drawText(line, x, y, TEXT_SCALE,
             color[0], color[1], color[2], screenW, screenH);
+    }
+
+    /** Truncate text to fit within pixel width. STBEasyFont ≈ 8px per char at scale 1.8. */
+    private static String truncate(String text, float widthPx) {
+        int maxChars = Math.max(5, (int) (widthPx / (8 * TEXT_SCALE / 2)));
+        if (text.length() <= maxChars) return text;
+        return text.substring(0, maxChars - 2) + "..";
     }
 
     @Override

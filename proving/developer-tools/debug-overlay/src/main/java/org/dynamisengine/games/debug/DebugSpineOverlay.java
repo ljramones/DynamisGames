@@ -44,13 +44,15 @@ final class DebugSpineOverlay {
         this.mapper = new DebugViewSnapshotMapper(session);
         this.builder = new DebugOverlayBuilder();
 
-        // Register sample watchdog rules
-        session.watchdog().addRule(WatchdogRule.above(
+        // Register sample watchdog rules with cooldown to avoid flooding
+        session.watchdog().addRule(new WatchdogRule(
             "engine.frameBudgetHigh", "worldengine", "budgetPercent",
-            95.0, DebugSeverity.WARNING, "Frame budget > 95%"));
-        session.watchdog().addRule(WatchdogRule.above(
+            95.0, WatchdogRule.Comparison.GREATER_THAN,
+            DebugSeverity.WARNING, "Frame budget > 95%", 120)); // 2 second cooldown at 60Hz
+        session.watchdog().addRule(new WatchdogRule(
             "ecs.entityCountHigh", "ecs", "entityCount",
-            500.0, DebugSeverity.WARNING, "Entity count > 500"));
+            500.0, WatchdogRule.Comparison.GREATER_THAN,
+            DebugSeverity.WARNING, "Entity count > 500", 60)); // 1 second cooldown
     }
 
     /**
