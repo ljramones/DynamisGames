@@ -23,11 +23,13 @@ import org.dynamisengine.ui.debug.model.DebugOverlayPanelId;
 import org.dynamisengine.ui.debug.model.PanelRegion;
 import org.dynamisengine.ui.debug.model.RowSeverity;
 import org.dynamisengine.ui.debug.render.DebugOverlayRenderer;
+import org.dynamisengine.ui.debug.export.TcpExporter;
 import org.dynamisengine.ui.debug.runtime.DebugOverlayOptions;
 import org.dynamisengine.ui.debug.runtime.DebugOverlayState;
 import org.dynamisengine.worldengine.api.GameContext;
 import org.dynamisengine.worldengine.api.WorldApplication;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -95,6 +97,7 @@ public final class ShowcaseGame implements WorldApplication {
     private DebugViewSnapshotMapper mapper;
     private DebugOverlayBuilder builder;
     private DebugDrawQueue drawQueue;
+    private TcpExporter tcpExporter;
     private final DebugOverlayState overlayState = new DebugOverlayState();
 
     // State
@@ -156,8 +159,15 @@ public final class ShowcaseGame implements WorldApplication {
         debugDrawRenderer.initialize();
         initSession();
 
+        // Start TCP exporter for remote viewer
+        tcpExporter = new TcpExporter(9876);
+        try { tcpExporter.start(); } catch (IOException e) {
+            System.err.println("TCP exporter failed to start: " + e.getMessage());
+        }
+
         System.out.println("=== Debug Subsystem Showcase ===");
         System.out.println("Capstone: full debug spine with overlay + debug draw + queries + timeline");
+        System.out.println("TCP telemetry server on port 9876 (connect with debug-remote-viewer)");
         System.out.println("1-4=phases  Q=cycle query  Space=spike  R=reset  P=pause  Tab=overlay  Esc=quit");
     }
 
@@ -266,6 +276,11 @@ public final class ShowcaseGame implements WorldApplication {
                 ? mapper.mapHistoricalFrame(overlayState.selectedFrameNumber())
                 : mapper.mapFromFrame(tick, frameSnapshots);
 
+            // Export for remote viewer
+            if (tcpExporter != null && !overlayState.isReplayMode()) {
+                tcpExporter.export(viewSnapshot);
+            }
+
             List<DebugOverlayPanel> panels = new ArrayList<>(builder.buildAll(viewSnapshot));
             panels.add(buildQueryPanel());
             lastPanelCount = panels.size();
@@ -319,6 +334,7 @@ public final class ShowcaseGame implements WorldApplication {
 
     @Override
     public void shutdown(GameContext context) {
+        if (tcpExporter != null) tcpExporter.close();
         debugDrawRenderer.shutdown();
         textRenderer.shutdown();
         System.out.printf("[Showcase] %d ticks, %.1fs, phase=%s%n", tick, totalTime, phase);

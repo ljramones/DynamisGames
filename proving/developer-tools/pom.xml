@@ -23,5 +23,6 @@
         <module>debug-watchdog-basics</module>
         <module>debug-session-queries</module>
         <module>debug-subsystem-showcase</module>
+        <module>debug-remote-viewer</module>
     </modules>
 </project>
