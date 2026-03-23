@@ -57,6 +57,10 @@ public final class SessionPlayerGame implements WorldApplication {
     static final ActionId SPEED_SLOW = new ActionId("speedSlow");
     static final ActionId SPEED_NORMAL = new ActionId("speedNormal");
     static final ActionId SPEED_FAST = new ActionId("speedFast");
+    static final ActionId NEXT_EVENT = new ActionId("nextEvent");
+    static final ActionId PREV_EVENT = new ActionId("prevEvent");
+    static final ActionId BOOKMARK = new ActionId("bookmark");
+    static final ActionId NEXT_BOOKMARK = new ActionId("nextBookmark");
     static final ActionId QUIT = new ActionId("quit");
     private static final ContextId CTX = new ContextId("player");
     private static final int KEY_TAB = 258, KEY_F = 70, KEY_SPACE = 32;
@@ -64,6 +68,7 @@ public final class SessionPlayerGame implements WorldApplication {
     private static final int KEY_COMMA = 44, KEY_PERIOD = 46, KEY_ESC = 256;
     private static final int KEY_HOME = 268, KEY_END = 269;
     private static final int KEY_1 = 49, KEY_2 = 50, KEY_3 = 51;
+    private static final int KEY_N = 78, KEY_B = 66, KEY_M = 77, KEY_J = 74;
 
     private final WindowSubsystem windowSub;
     private final WindowInputSubsystem inputSub;
@@ -82,6 +87,11 @@ public final class SessionPlayerGame implements WorldApplication {
     private float accumulator;
     private boolean overlayVisible = true;
     private int lastPanelCount;
+
+    // Event indices (frames that have WARNING/ERROR/CRITICAL events)
+    private int[] eventFrameIndices;
+    // Bookmarks
+    private final java.util.List<Integer> bookmarks = new java.util.ArrayList<>();
 
     public SessionPlayerGame(WindowSubsystem w, WindowInputSubsystem i, String sessionFile) {
         this.windowSub = w;
@@ -104,6 +114,10 @@ public final class SessionPlayerGame implements WorldApplication {
                     Map.entry(SPEED_SLOW, List.of(new KeyBinding(KEY_1, 0))),
                     Map.entry(SPEED_NORMAL, List.of(new KeyBinding(KEY_2, 0))),
                     Map.entry(SPEED_FAST, List.of(new KeyBinding(KEY_3, 0))),
+                    Map.entry(NEXT_EVENT, List.of(new KeyBinding(KEY_N, 0))),
+                    Map.entry(PREV_EVENT, List.of(new KeyBinding(KEY_B, 0))),
+                    Map.entry(BOOKMARK, List.of(new KeyBinding(KEY_M, 0))),
+                    Map.entry(NEXT_BOOKMARK, List.of(new KeyBinding(KEY_J, 0))),
                     Map.entry(QUIT, List.of(new KeyBinding(KEY_ESC, 0)))),
                 Map.of(),
                 false);
@@ -132,6 +146,9 @@ public final class SessionPlayerGame implements WorldApplication {
             snapshots = List.of();
         }
 
+        // Build event index: frames that have significant events
+        buildEventIndex();
+
         currentIndex = 0;
         playing = false;
 
@@ -154,9 +171,13 @@ public final class SessionPlayerGame implements WorldApplication {
             if (frame.pressed(STEP_FWD)) currentIndex = Math.min(snapshots.size() - 1, currentIndex + 1);
             if (frame.pressed(JUMP_START)) currentIndex = 0;
             if (frame.pressed(JUMP_END)) currentIndex = Math.max(0, snapshots.size() - 1);
-            if (frame.pressed(SPEED_SLOW)) { playbackSpeed = 0.25f; System.out.println("Speed: 0.25x"); }
-            if (frame.pressed(SPEED_NORMAL)) { playbackSpeed = 1.0f; System.out.println("Speed: 1x"); }
-            if (frame.pressed(SPEED_FAST)) { playbackSpeed = 2.0f; System.out.println("Speed: 2x"); }
+            if (frame.pressed(SPEED_SLOW)) { playbackSpeed = 0.25f; }
+            if (frame.pressed(SPEED_NORMAL)) { playbackSpeed = 1.0f; }
+            if (frame.pressed(SPEED_FAST)) { playbackSpeed = 2.0f; }
+            if (frame.pressed(NEXT_EVENT)) jumpToNextEvent();
+            if (frame.pressed(PREV_EVENT)) jumpToPrevEvent();
+            if (frame.pressed(BOOKMARK)) addBookmark();
+            if (frame.pressed(NEXT_BOOKMARK)) jumpToNextBookmark();
         }
 
         // Auto-advance when playing
@@ -211,19 +232,32 @@ public final class SessionPlayerGame implements WorldApplication {
             float barW = w - 20;
             textRenderer.drawRect(10, barY, barW, 8, 0.2f, 0.2f, 0.2f, 0.8f, w, h);
 
-            // Draw progress position
+            // Draw event markers on progress bar
             if (!snapshots.isEmpty()) {
-                float progress = (float) currentIndex / Math.max(1, snapshots.size() - 1);
+                int totalFrames = snapshots.size();
+                for (int ei : eventFrameIndices) {
+                    float ex = 10 + barW * ((float) ei / Math.max(1, totalFrames - 1));
+                    textRenderer.drawRect(ex, barY - 2, 2, 12, 1f, 0.3f, 0.2f, 0.8f, w, h);
+                }
+                // Draw bookmark markers
+                for (int bi : bookmarks) {
+                    float bx = 10 + barW * ((float) bi / Math.max(1, totalFrames - 1));
+                    textRenderer.drawRect(bx, barY - 3, 2, 14, 0.3f, 0.7f, 1f, 0.9f, w, h);
+                }
+                // Draw progress position
+                float progress = (float) currentIndex / Math.max(1, totalFrames - 1);
                 textRenderer.drawRect(10, barY, barW * progress, 8, 0.3f, 1f, 0.5f, 0.9f, w, h);
             }
 
             // Status
             String playState = playing ? "PLAYING " + playbackSpeed + "x" : "PAUSED";
-            textRenderer.drawText(String.format("[%s]  Frame %d/%d  Tick: %d",
-                playState, currentIndex + 1, snapshots.size(), snapshot.tick()),
+            String bmInfo = bookmarks.isEmpty() ? "" : "  Bookmarks: " + bookmarks.size();
+            textRenderer.drawText(String.format("[%s]  Frame %d/%d  Tick: %d  Events: %d%s",
+                playState, currentIndex + 1, snapshots.size(), snapshot.tick(),
+                eventFrameIndices.length, bmInfo),
                 10, h - 45, 2.0f, 0.8f, 0.8f, 0.4f, w, h);
             textRenderer.drawText(
-                "Space=play/pause  ,/.=step  Home/End=jump  1/2/3=speed  F=focus  Esc=quit",
+                "Space=play  ,/.=step  N/B=event  M=bookmark  J=next bookmark  F=focus  Esc=quit",
                 10, h - 20, 1.6f, 0.4f, 0.4f, 0.5f, w, h);
             textRenderer.endFrame();
         }
@@ -234,7 +268,72 @@ public final class SessionPlayerGame implements WorldApplication {
     @Override
     public void shutdown(GameContext context) {
         textRenderer.shutdown();
-        System.out.printf("[SessionPlayer] Viewed %d/%d frames%n",
-            currentIndex + 1, snapshots.size());
+        System.out.printf("[SessionPlayer] Viewed %d/%d frames, %d bookmarks%n",
+            currentIndex + 1, snapshots.size(), bookmarks.size());
+    }
+
+    // --- Event index + navigation ---
+
+    private void buildEventIndex() {
+        var indices = new java.util.ArrayList<Integer>();
+        for (int i = 0; i < snapshots.size(); i++) {
+            var snap = snapshots.get(i);
+            // Significant = has WARNING/ERROR/CRITICAL timeline events
+            if (!snap.timelineEvents().isEmpty()) {
+                boolean significant = snap.timelineEvents().stream()
+                    .anyMatch(e -> "WARNING".equals(e.severity()) ||
+                                   "ERROR".equals(e.severity()) ||
+                                   "CRITICAL".equals(e.severity()));
+                if (significant) indices.add(i);
+            }
+            // Also significant if alerts changed from previous frame
+            if (i > 0 && snap.alerts().size() != snapshots.get(i - 1).alerts().size()) {
+                if (!indices.contains(i)) indices.add(i);
+            }
+        }
+        eventFrameIndices = indices.stream().mapToInt(Integer::intValue).toArray();
+        System.out.println("Event index: " + eventFrameIndices.length + " significant frames");
+    }
+
+    private void jumpToNextEvent() {
+        for (int ei : eventFrameIndices) {
+            if (ei > currentIndex) {
+                currentIndex = ei;
+                playing = false;
+                return;
+            }
+        }
+    }
+
+    private void jumpToPrevEvent() {
+        for (int i = eventFrameIndices.length - 1; i >= 0; i--) {
+            if (eventFrameIndices[i] < currentIndex) {
+                currentIndex = eventFrameIndices[i];
+                playing = false;
+                return;
+            }
+        }
+    }
+
+    private void addBookmark() {
+        if (!bookmarks.contains(currentIndex)) {
+            bookmarks.add(currentIndex);
+            bookmarks.sort(Integer::compareTo);
+            System.out.println("Bookmark added at frame " + (currentIndex + 1));
+        }
+    }
+
+    private void jumpToNextBookmark() {
+        if (bookmarks.isEmpty()) return;
+        for (int bi : bookmarks) {
+            if (bi > currentIndex) {
+                currentIndex = bi;
+                playing = false;
+                return;
+            }
+        }
+        // Wrap to first bookmark
+        currentIndex = bookmarks.getFirst();
+        playing = false;
     }
 }
