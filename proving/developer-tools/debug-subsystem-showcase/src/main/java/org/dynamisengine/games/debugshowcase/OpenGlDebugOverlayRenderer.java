@@ -366,7 +366,9 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
                     String.format("  [min=%.2f max=%.2f]", trend.min(), trend.max()),
                     x, y, TEXT_SCALE * 0.85f, TEXT_DIM[0], TEXT_DIM[1], TEXT_DIM[2], screenW, screenH);
                 y += ROW_HEIGHT;
-                drawTrend(trend, new LayoutBox(x + 8, y, trendWidth, trendHeight));
+                var trendBox = new LayoutBox(x + 8, y, trendWidth, trendHeight);
+                drawTrend(trend, trendBox);
+                drawTrendAnnotations(trendBox, timelineEvents);
                 y += trendHeight + 6;
             }
         }
@@ -408,6 +410,33 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
     @Override
     public void endOverlay() {
         textRenderer.endFrame();
+    }
+
+    /** Draw event markers on a trend graph in focus mode. */
+    private void drawTrendAnnotations(LayoutBox box,
+                                       java.util.List<DebugViewSnapshot.DebugTimelineEvent> events) {
+        if (events.isEmpty()) return;
+
+        long minFrame = Long.MAX_VALUE, maxFrame = Long.MIN_VALUE;
+        for (var e : events) {
+            if (e.frameNumber() < minFrame) minFrame = e.frameNumber();
+            if (e.frameNumber() > maxFrame) maxFrame = e.frameNumber();
+        }
+        long frameRange = Math.max(1, maxFrame - minFrame);
+
+        for (var event : events) {
+            float t = (float)(event.frameNumber() - minFrame) / frameRange;
+            float ex = box.x() + t * box.width();
+
+            boolean severe = "ERROR".equals(event.severity()) || "CRITICAL".equals(event.severity());
+            float r = severe ? 1f : 1f;
+            float g = severe ? 0.2f : 0.8f;
+            float b = severe ? 0.2f : 0.2f;
+            float a = severe ? 0.7f : 0.5f;
+            float tickH = severe ? box.height() : box.height() * 0.6f;
+
+            textRenderer.drawRect(ex, box.y(), 1.5f, tickH, r, g, b, a, screenW, screenH);
+        }
     }
 
     private boolean isEmpty(DebugOverlayPanel panel) {
