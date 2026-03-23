@@ -61,6 +61,7 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
         this.screenW = screenW;
         this.screenH = screenH;
 
+        org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_DEPTH_TEST);
         beginOverlay();
 
         float startX = 8f;
@@ -264,6 +265,9 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
                              List<DebugViewSnapshot.DebugTimelineEvent> timelineEvents) {
         this.screenW = (int) screen.width();
         this.screenH = (int) screen.height();
+
+        // Disable depth test so 2D overlay renders on top of 3D scene
+        org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_DEPTH_TEST);
 
         beginOverlay();
 
