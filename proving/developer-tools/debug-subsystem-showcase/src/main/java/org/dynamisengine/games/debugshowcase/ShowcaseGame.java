@@ -22,7 +22,9 @@ import org.dynamisengine.ui.debug.model.DebugOverlayPanel;
 import org.dynamisengine.ui.debug.model.DebugOverlayPanelId;
 import org.dynamisengine.ui.debug.model.PanelRegion;
 import org.dynamisengine.ui.debug.model.RowSeverity;
+import org.dynamisengine.ui.debug.render.DebugOverlayRenderer;
 import org.dynamisengine.ui.debug.runtime.DebugOverlayOptions;
+import org.dynamisengine.ui.debug.runtime.DebugOverlayState;
 import org.dynamisengine.worldengine.api.GameContext;
 import org.dynamisengine.worldengine.api.WorldApplication;
 
@@ -63,10 +65,14 @@ public final class ShowcaseGame implements WorldApplication {
     static final ActionId INJECT_SPIKE = new ActionId("spike");
     static final ActionId RESET = new ActionId("reset");
     static final ActionId PAUSE_ACTION = new ActionId("pause");
+    static final ActionId FOCUS = new ActionId("focus");
+    static final ActionId FOCUS_NEXT = new ActionId("focusNext");
+    static final ActionId FOCUS_PREV = new ActionId("focusPrev");
     static final ActionId QUIT = new ActionId("quit");
     private static final ContextId CTX = new ContextId("showcase");
     private static final int KEY_TAB = 258, KEY_1 = 49, KEY_2 = 50, KEY_3 = 51, KEY_4 = 52;
     private static final int KEY_Q = 81, KEY_SPACE = 32, KEY_R = 82, KEY_P = 80, KEY_ESC = 256;
+    private static final int KEY_F = 70, KEY_LEFT_BRACKET = 91, KEY_RIGHT_BRACKET = 93;
 
     private static final DebugOverlayPanelId QUERY_PANEL_ID = new DebugOverlayPanelId("query", "results");
     private static final float PHASE_DURATION = 5f;
@@ -85,6 +91,7 @@ public final class ShowcaseGame implements WorldApplication {
     private DebugViewSnapshotMapper mapper;
     private DebugOverlayBuilder builder;
     private DebugDrawQueue drawQueue;
+    private final DebugOverlayState overlayState = new DebugOverlayState();
 
     // State
     private Phase phase = Phase.IDLE;
@@ -94,6 +101,7 @@ public final class ShowcaseGame implements WorldApplication {
     private boolean overlayVisible = true;
     private boolean paused = false;
     private int queryMode = 0; // 0=spikes, 1=noisy, 2=correlation
+    private int lastPanelCount = 0;
     private float cameraAngle = 0f;
 
     // Simulated subsystem metrics
@@ -122,6 +130,9 @@ public final class ShowcaseGame implements WorldApplication {
                     Map.entry(INJECT_SPIKE, List.of(new KeyBinding(KEY_SPACE, 0))),
                     Map.entry(RESET, List.of(new KeyBinding(KEY_R, 0))),
                     Map.entry(PAUSE_ACTION, List.of(new KeyBinding(KEY_P, 0))),
+                    Map.entry(FOCUS, List.of(new KeyBinding(KEY_F, 0))),
+                    Map.entry(FOCUS_NEXT, List.of(new KeyBinding(KEY_RIGHT_BRACKET, 0))),
+                    Map.entry(FOCUS_PREV, List.of(new KeyBinding(KEY_LEFT_BRACKET, 0))),
                     Map.entry(QUIT, List.of(new KeyBinding(KEY_ESC, 0)))),
                 Map.of(),
                 false);
@@ -191,6 +202,9 @@ public final class ShowcaseGame implements WorldApplication {
             if (frame.pressed(PHASE_4)) setPhase(Phase.RECOVERY);
             if (frame.pressed(CYCLE_QUERY)) { queryMode = (queryMode + 1) % 3; }
             if (frame.pressed(INJECT_SPIKE)) injectSpike();
+            if (frame.pressed(FOCUS)) overlayState.toggleFocus();
+            if (frame.pressed(FOCUS_NEXT)) overlayState.nextPanel(lastPanelCount);
+            if (frame.pressed(FOCUS_PREV)) overlayState.previousPanel(lastPanelCount);
         }
 
         if (!paused) {
@@ -235,17 +249,48 @@ public final class ShowcaseGame implements WorldApplication {
             var viewSnapshot = mapper.mapFromFrame(tick, frameSnapshots);
             List<DebugOverlayPanel> panels = new ArrayList<>(builder.buildAll(viewSnapshot));
             panels.add(buildQueryPanel());
-            overlayRenderer.renderPanels(panels, w, h);
+            lastPanelCount = panels.size();
 
-            // Status bar
-            textRenderer.beginFrame(w, h);
-            textRenderer.drawText(String.format("Phase: %s  Tick: %d  Query: %s  %s",
-                phase, tick, queryModeName(), paused ? "[PAUSED]" : ""),
-                10, h - 40, 2.0f, 0.8f, 0.8f, 0.4f, w, h);
-            textRenderer.drawText(
-                "1-4=phase  Q=query  Space=spike  R=reset  P=pause  Tab=overlay  Esc=quit",
-                10, h - 20, 1.6f, 0.4f, 0.4f, 0.5f, w, h);
-            textRenderer.endFrame();
+            if (overlayState.isFocusMode()) {
+                // Focus mode: render single panel fullscreen
+                var focused = overlayState.focusedPanel(panels);
+                if (focused != null) {
+                    // Filter timeline events by panel category
+                    String category = focused.id().category();
+                    var categoryEvents = viewSnapshot.timelineEvents().stream()
+                        .filter(e -> e.source().contains(category) ||
+                                     category.equals("engine") && e.source().equals("scenario") ||
+                                     category.equals("query"))
+                        .toList();
+
+                    overlayRenderer.renderFocus(focused,
+                        new DebugOverlayRenderer.LayoutBox(0, 0, w, h), categoryEvents);
+                }
+
+                // Focus status bar
+                textRenderer.beginFrame(w, h);
+                textRenderer.drawText(String.format(
+                    "FOCUS [%d/%d]  Phase: %s  Tick: %d  %s",
+                    overlayState.focusedPanelIndex() + 1, lastPanelCount,
+                    phase, tick, paused ? "[PAUSED]" : ""),
+                    10, h - 40, 2.0f, 0.8f, 0.8f, 0.4f, w, h);
+                textRenderer.drawText(
+                    "F=exit  [/]=cycle  1-4=phase  Space=spike  R=reset  Esc=quit",
+                    10, h - 20, 1.6f, 0.4f, 0.4f, 0.5f, w, h);
+                textRenderer.endFrame();
+            } else {
+                // Normal overlay mode
+                overlayRenderer.renderPanels(panels, w, h);
+
+                textRenderer.beginFrame(w, h);
+                textRenderer.drawText(String.format("Phase: %s  Tick: %d  Query: %s  %s",
+                    phase, tick, queryModeName(), paused ? "[PAUSED]" : ""),
+                    10, h - 40, 2.0f, 0.8f, 0.8f, 0.4f, w, h);
+                textRenderer.drawText(
+                    "F=focus  1-4=phase  Q=query  Space=spike  R=reset  Tab=overlay  Esc=quit",
+                    10, h - 20, 1.6f, 0.4f, 0.4f, 0.5f, w, h);
+                textRenderer.endFrame();
+            }
         }
 
         windowSub.window().swapBuffers();
