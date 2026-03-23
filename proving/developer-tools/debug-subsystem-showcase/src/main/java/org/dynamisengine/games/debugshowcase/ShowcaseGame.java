@@ -23,6 +23,7 @@ import org.dynamisengine.ui.debug.model.DebugOverlayPanelId;
 import org.dynamisengine.ui.debug.model.PanelRegion;
 import org.dynamisengine.ui.debug.model.RowSeverity;
 import org.dynamisengine.ui.debug.render.DebugOverlayRenderer;
+import org.dynamisengine.ui.debug.export.DebugSessionMetadata;
 import org.dynamisengine.ui.debug.export.JsonFileExporter;
 import org.dynamisengine.ui.debug.export.TcpExporter;
 import org.dynamisengine.ui.debug.runtime.DebugOverlayOptions;
@@ -342,7 +343,25 @@ public final class ShowcaseGame implements WorldApplication {
     @Override
     public void shutdown(GameContext context) {
         if (tcpExporter != null) tcpExporter.close();
-        if (fileExporter != null) fileExporter.close();
+        if (fileExporter != null) {
+            fileExporter.close();
+            // Write session metadata sidecar
+            var meta = new DebugSessionMetadata();
+            meta.setEngineVersion("1.0.0-SNAPSHOT");
+            meta.setBackend("opengl");
+            meta.setScenario("debug-subsystem-showcase");
+            meta.setFrameCount(fileExporter.snapshotCount());
+            meta.setFirstTick(1);
+            meta.setLastTick(tick);
+            meta.setDurationSeconds(totalTime);
+            try {
+                java.nio.file.Files.writeString(
+                    java.nio.file.Path.of("debug-session.meta.json"), meta.toJson());
+                System.out.println("Session metadata written: debug-session.meta.json");
+            } catch (IOException e) {
+                System.err.println("Failed to write metadata: " + e.getMessage());
+            }
+        }
         debugDrawRenderer.shutdown();
         textRenderer.shutdown();
         System.out.printf("[Showcase] %d ticks, %.1fs, phase=%s%n", tick, totalTime, phase);

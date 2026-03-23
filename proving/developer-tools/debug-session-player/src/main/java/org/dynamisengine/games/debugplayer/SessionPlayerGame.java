@@ -7,6 +7,7 @@ import org.dynamisengine.input.api.frame.InputFrame;
 import org.dynamisengine.input.core.DefaultInputProcessor;
 import org.dynamisengine.ui.debug.builder.DebugOverlayBuilder;
 import org.dynamisengine.ui.debug.builder.DebugViewSnapshot;
+import org.dynamisengine.ui.debug.export.DebugSessionMetadata;
 import org.dynamisengine.ui.debug.export.DebugSnapshotReplayLoader;
 import org.dynamisengine.ui.debug.model.DebugOverlayPanel;
 import org.dynamisengine.ui.debug.render.DebugOverlayRenderer;
@@ -88,10 +89,10 @@ public final class SessionPlayerGame implements WorldApplication {
     private boolean overlayVisible = true;
     private int lastPanelCount;
 
-    // Event indices (frames that have WARNING/ERROR/CRITICAL events)
     private int[] eventFrameIndices;
-    // Bookmarks
     private final java.util.List<Integer> bookmarks = new java.util.ArrayList<>();
+    private DebugSessionMetadata metadata;
+    private Path metadataPath;
 
     public SessionPlayerGame(WindowSubsystem w, WindowInputSubsystem i, String sessionFile) {
         this.windowSub = w;
@@ -146,13 +147,35 @@ public final class SessionPlayerGame implements WorldApplication {
             snapshots = List.of();
         }
 
-        // Build event index: frames that have significant events
         buildEventIndex();
+
+        // Load session metadata sidecar if available
+        metadataPath = Path.of(sessionFile.replace(".ndjson", ".meta.json"));
+        try {
+            if (java.nio.file.Files.exists(metadataPath)) {
+                metadata = DebugSessionMetadata.fromJson(java.nio.file.Files.readString(metadataPath));
+                System.out.printf("Session: %s  Backend: %s  Scenario: %s  Recorded: %s%n",
+                    metadata.engineVersion(), metadata.backend(),
+                    metadata.scenario(), metadata.recordedAt());
+                // Restore bookmarks from metadata
+                for (var bm : metadata.bookmarks()) {
+                    if (!bookmarks.contains(bm.frameIndex())) {
+                        bookmarks.add(bm.frameIndex());
+                    }
+                }
+                if (!bookmarks.isEmpty()) {
+                    bookmarks.sort(Integer::compareTo);
+                    System.out.println("Restored " + bookmarks.size() + " bookmarks from metadata");
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("No metadata sidecar found (optional)");
+        }
 
         currentIndex = 0;
         playing = false;
 
-        System.out.println("Space=play/pause  ,/.=step  Home/End=jump  1/2/3=speed  F=focus  Esc=quit");
+        System.out.println("Space=play  ,/.=step  N/B=event  M=bookmark  J=next bookmark  F=focus  Esc=quit");
     }
 
     @Override
@@ -267,6 +290,28 @@ public final class SessionPlayerGame implements WorldApplication {
 
     @Override
     public void shutdown(GameContext context) {
+        // Save bookmarks to metadata sidecar
+        if (!bookmarks.isEmpty() && metadataPath != null) {
+            if (metadata == null) {
+                metadata = new DebugSessionMetadata();
+                metadata.setFrameCount(snapshots.size());
+                if (!snapshots.isEmpty()) {
+                    metadata.setFirstTick(snapshots.getFirst().tick());
+                    metadata.setLastTick(snapshots.getLast().tick());
+                }
+            }
+            metadata.bookmarks().clear();
+            for (int bi : bookmarks) {
+                metadata.addBookmark(bi, "");
+            }
+            try {
+                java.nio.file.Files.writeString(metadataPath, metadata.toJson());
+                System.out.println("Bookmarks saved to " + metadataPath);
+            } catch (IOException e) {
+                System.err.println("Failed to save bookmarks: " + e.getMessage());
+            }
+        }
+
         textRenderer.shutdown();
         System.out.printf("[SessionPlayer] Viewed %d/%d frames, %d bookmarks%n",
             currentIndex + 1, snapshots.size(), bookmarks.size());
