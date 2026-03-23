@@ -24,5 +24,6 @@
         <module>debug-session-queries</module>
         <module>debug-subsystem-showcase</module>
         <module>debug-remote-viewer</module>
+        <module>debug-session-player</module>
     </modules>
 </project>

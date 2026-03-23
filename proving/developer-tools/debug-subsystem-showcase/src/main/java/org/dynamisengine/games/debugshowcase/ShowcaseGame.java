@@ -23,6 +23,7 @@ import org.dynamisengine.ui.debug.model.DebugOverlayPanelId;
 import org.dynamisengine.ui.debug.model.PanelRegion;
 import org.dynamisengine.ui.debug.model.RowSeverity;
 import org.dynamisengine.ui.debug.render.DebugOverlayRenderer;
+import org.dynamisengine.ui.debug.export.JsonFileExporter;
 import org.dynamisengine.ui.debug.export.TcpExporter;
 import org.dynamisengine.ui.debug.runtime.DebugOverlayOptions;
 import org.dynamisengine.ui.debug.runtime.DebugOverlayState;
@@ -98,6 +99,7 @@ public final class ShowcaseGame implements WorldApplication {
     private DebugOverlayBuilder builder;
     private DebugDrawQueue drawQueue;
     private TcpExporter tcpExporter;
+    private JsonFileExporter fileExporter;
     private final DebugOverlayState overlayState = new DebugOverlayState();
 
     // State
@@ -159,10 +161,14 @@ public final class ShowcaseGame implements WorldApplication {
         debugDrawRenderer.initialize();
         initSession();
 
-        // Start TCP exporter for remote viewer
+        // Start exporters
         tcpExporter = new TcpExporter(9876);
         try { tcpExporter.start(); } catch (IOException e) {
             System.err.println("TCP exporter failed to start: " + e.getMessage());
+        }
+        fileExporter = new JsonFileExporter(java.nio.file.Path.of("debug-session.ndjson"));
+        try { fileExporter.open(); } catch (IOException e) {
+            System.err.println("File exporter failed to open: " + e.getMessage());
         }
 
         System.out.println("=== Debug Subsystem Showcase ===");
@@ -276,9 +282,10 @@ public final class ShowcaseGame implements WorldApplication {
                 ? mapper.mapHistoricalFrame(overlayState.selectedFrameNumber())
                 : mapper.mapFromFrame(tick, frameSnapshots);
 
-            // Export for remote viewer
-            if (tcpExporter != null && !overlayState.isReplayMode()) {
-                tcpExporter.export(viewSnapshot);
+            // Export for remote viewer + file recording
+            if (!overlayState.isReplayMode()) {
+                if (tcpExporter != null) tcpExporter.export(viewSnapshot);
+                if (fileExporter != null) fileExporter.export(viewSnapshot);
             }
 
             List<DebugOverlayPanel> panels = new ArrayList<>(builder.buildAll(viewSnapshot));
@@ -335,6 +342,7 @@ public final class ShowcaseGame implements WorldApplication {
     @Override
     public void shutdown(GameContext context) {
         if (tcpExporter != null) tcpExporter.close();
+        if (fileExporter != null) fileExporter.close();
         debugDrawRenderer.shutdown();
         textRenderer.shutdown();
         System.out.printf("[Showcase] %d ticks, %.1fs, phase=%s%n", tick, totalTime, phase);
