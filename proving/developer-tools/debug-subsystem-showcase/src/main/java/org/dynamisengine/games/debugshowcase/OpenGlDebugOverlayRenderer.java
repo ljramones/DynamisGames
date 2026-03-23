@@ -6,6 +6,11 @@ import org.dynamisengine.ui.debug.render.DebugOverlayRenderer;
 
 import java.util.List;
 
+import static org.lwjgl.opengl.GL11.GL_SCISSOR_TEST;
+import static org.lwjgl.opengl.GL11.glDisable;
+import static org.lwjgl.opengl.GL11.glEnable;
+import static org.lwjgl.opengl.GL11.glScissor;
+
 /**
  * Minimal OpenGL implementation of {@link DebugOverlayRenderer}.
  *
@@ -137,15 +142,20 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
                 1f, 0.8f, 0.2f, 1f, screenW, screenH);
         }
 
+        // Clip content to panel bounds (OpenGL scissor: Y is bottom-up)
+        glEnable(GL_SCISSOR_TEST);
+        glScissor((int) box.x(), screenH - (int)(box.y() + box.height()),
+            (int) box.width(), (int) box.height());
+
         float x = box.x() + PANEL_PADDING;
         float y = box.y() + (compact ? 4f : PANEL_PADDING);
 
         // Title
         if (compact) {
-            // Compact: title + "no data" on same line, dimmer
             textRenderer.drawText(panel.title() + " - no data", x, y, TEXT_SCALE,
                 TEXT_DIM[0], TEXT_DIM[1], TEXT_DIM[2], screenW, screenH);
-            return; // nothing more to draw
+            glDisable(GL_SCISSOR_TEST);
+            return;
         }
 
         float[] titleColor = panel.highlighted() ? TEXT_WARNING : TEXT_HEADER;
@@ -184,6 +194,8 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
                 y += trendHeight + 2;
             }
         }
+
+        glDisable(GL_SCISSOR_TEST);
     }
 
     @Override
