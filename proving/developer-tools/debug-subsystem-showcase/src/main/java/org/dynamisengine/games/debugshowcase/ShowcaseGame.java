@@ -68,11 +68,15 @@ public final class ShowcaseGame implements WorldApplication {
     static final ActionId FOCUS = new ActionId("focus");
     static final ActionId FOCUS_NEXT = new ActionId("focusNext");
     static final ActionId FOCUS_PREV = new ActionId("focusPrev");
+    static final ActionId REPLAY_TOGGLE = new ActionId("replayToggle");
+    static final ActionId STEP_BACK = new ActionId("stepBack");
+    static final ActionId STEP_FWD = new ActionId("stepFwd");
     static final ActionId QUIT = new ActionId("quit");
     private static final ContextId CTX = new ContextId("showcase");
     private static final int KEY_TAB = 258, KEY_1 = 49, KEY_2 = 50, KEY_3 = 51, KEY_4 = 52;
     private static final int KEY_Q = 81, KEY_SPACE = 32, KEY_R = 82, KEY_P = 80, KEY_ESC = 256;
     private static final int KEY_F = 70, KEY_LEFT_BRACKET = 91, KEY_RIGHT_BRACKET = 93;
+    private static final int KEY_T = 84, KEY_COMMA = 44, KEY_PERIOD = 46;
 
     private static final DebugOverlayPanelId QUERY_PANEL_ID = new DebugOverlayPanelId("query", "results");
     private static final float PHASE_DURATION = 5f;
@@ -133,6 +137,9 @@ public final class ShowcaseGame implements WorldApplication {
                     Map.entry(FOCUS, List.of(new KeyBinding(KEY_F, 0))),
                     Map.entry(FOCUS_NEXT, List.of(new KeyBinding(KEY_RIGHT_BRACKET, 0))),
                     Map.entry(FOCUS_PREV, List.of(new KeyBinding(KEY_LEFT_BRACKET, 0))),
+                    Map.entry(REPLAY_TOGGLE, List.of(new KeyBinding(KEY_T, 0))),
+                    Map.entry(STEP_BACK, List.of(new KeyBinding(KEY_COMMA, 0))),
+                    Map.entry(STEP_FWD, List.of(new KeyBinding(KEY_PERIOD, 0))),
                     Map.entry(QUIT, List.of(new KeyBinding(KEY_ESC, 0)))),
                 Map.of(),
                 false);
@@ -205,6 +212,14 @@ public final class ShowcaseGame implements WorldApplication {
             if (frame.pressed(FOCUS)) overlayState.toggleFocus();
             if (frame.pressed(FOCUS_NEXT)) overlayState.nextPanel(lastPanelCount);
             if (frame.pressed(FOCUS_PREV)) overlayState.previousPanel(lastPanelCount);
+            if (frame.pressed(REPLAY_TOGGLE)) overlayState.toggleReplay(tick);
+            if (frame.pressed(STEP_BACK)) {
+                long oldest = session.history().oldestFrameNumber();
+                overlayState.stepBackward(10, Math.max(0, oldest));
+            }
+            if (frame.pressed(STEP_FWD)) {
+                overlayState.stepForward(10, session.history().newestFrameNumber());
+            }
         }
 
         if (!paused) {
@@ -246,10 +261,16 @@ public final class ShowcaseGame implements WorldApplication {
 
         // Render overlay on top
         if (overlayVisible) {
-            var viewSnapshot = mapper.mapFromFrame(tick, frameSnapshots);
+            // Choose snapshot source: live or historical
+            var viewSnapshot = overlayState.isReplayMode()
+                ? mapper.mapHistoricalFrame(overlayState.selectedFrameNumber())
+                : mapper.mapFromFrame(tick, frameSnapshots);
+
             List<DebugOverlayPanel> panels = new ArrayList<>(builder.buildAll(viewSnapshot));
             panels.add(buildQueryPanel());
             lastPanelCount = panels.size();
+
+            String modeLabel = overlayState.modeLabel(tick);
 
             if (overlayState.isFocusMode()) {
                 // Focus mode: render single panel fullscreen
@@ -270,12 +291,12 @@ public final class ShowcaseGame implements WorldApplication {
                 // Focus status bar
                 textRenderer.beginFrame(w, h);
                 textRenderer.drawText(String.format(
-                    "FOCUS [%d/%d]  Phase: %s  Tick: %d  %s",
+                    "FOCUS [%d/%d]  %s  Phase: %s  Tick: %d  %s",
                     overlayState.focusedPanelIndex() + 1, lastPanelCount,
-                    phase, tick, paused ? "[PAUSED]" : ""),
+                    modeLabel, phase, tick, paused ? "[PAUSED]" : ""),
                     10, h - 40, 2.0f, 0.8f, 0.8f, 0.4f, w, h);
                 textRenderer.drawText(
-                    "F=exit  [/]=cycle  1-4=phase  Space=spike  R=reset  Esc=quit",
+                    "F=exit  [/]=cycle  T=replay  ,/.=step  Esc=quit",
                     10, h - 20, 1.6f, 0.4f, 0.4f, 0.5f, w, h);
                 textRenderer.endFrame();
             } else {
@@ -283,11 +304,11 @@ public final class ShowcaseGame implements WorldApplication {
                 overlayRenderer.renderPanels(panels, w, h);
 
                 textRenderer.beginFrame(w, h);
-                textRenderer.drawText(String.format("Phase: %s  Tick: %d  Query: %s  %s",
-                    phase, tick, queryModeName(), paused ? "[PAUSED]" : ""),
+                textRenderer.drawText(String.format("%s  Phase: %s  Tick: %d  Query: %s  %s",
+                    modeLabel, phase, tick, queryModeName(), paused ? "[PAUSED]" : ""),
                     10, h - 40, 2.0f, 0.8f, 0.8f, 0.4f, w, h);
                 textRenderer.drawText(
-                    "F=focus  1-4=phase  Q=query  Space=spike  R=reset  Tab=overlay  Esc=quit",
+                    "F=focus  T=replay  ,/.=step  1-4=phase  Q=query  Space=spike  Esc=quit",
                     10, h - 20, 1.6f, 0.4f, 0.4f, 0.5f, w, h);
                 textRenderer.endFrame();
             }
