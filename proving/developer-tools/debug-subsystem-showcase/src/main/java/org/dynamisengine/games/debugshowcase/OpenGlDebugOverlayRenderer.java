@@ -57,7 +57,8 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
      * GRID panels flow in two columns.
      * BOTTOM panels go at the bottom.
      */
-    void renderPanels(List<DebugOverlayPanel> panels, int screenW, int screenH) {
+    @Override
+    public void renderPanels(List<DebugOverlayPanel> panels, int screenW, int screenH) {
         this.screenW = screenW;
         this.screenH = screenH;
 
