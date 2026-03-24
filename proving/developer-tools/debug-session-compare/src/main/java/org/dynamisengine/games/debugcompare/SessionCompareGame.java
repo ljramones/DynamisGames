@@ -2,6 +2,7 @@ package org.dynamisengine.games.debugcompare;
 
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
+import org.dynamisengine.window.api.InputEvent;
 import org.dynamisengine.input.api.context.InputMap;
 import org.dynamisengine.input.api.frame.InputFrame;
 import org.dynamisengine.input.core.DefaultInputProcessor;
@@ -80,6 +81,11 @@ public final class SessionCompareGame implements WorldApplication {
     private float playbackSpeed = 1f;
     private float accumulator;
     private boolean activeSideLeft = true;
+
+    // Mouse state
+    private double mouseX, mouseY;
+    private boolean mouseDown;
+    private int hoverFrameIndex = -1;
 
     // Precomputed anomaly data
     private float[] perFrameScores;
@@ -170,6 +176,17 @@ public final class SessionCompareGame implements WorldApplication {
             if (frame.pressed(EXPORT_REPORT)) exportReport();
         }
 
+        // Process mouse events for timeline scrubbing
+        var windowEvents = windowSub.lastEvents();
+        for (var evt : windowEvents.inputEvents()) {
+            switch (evt) {
+                case InputEvent.CursorMoved cm -> { mouseX = cm.x(); mouseY = cm.y(); }
+                case InputEvent.MouseButton mb -> mouseDown = (mb.button() == 0 && mb.action() == InputEvent.InputAction.PRESS)
+                    || (mb.button() == 0 && mb.action() != InputEvent.InputAction.RELEASE && mouseDown);
+                default -> {}
+            }
+        }
+
         // Auto-advance
         if (playing) {
             accumulator += dt * playbackSpeed;
@@ -181,13 +198,37 @@ public final class SessionCompareGame implements WorldApplication {
             if (currentIndex >= maxIndex) playing = false;
         }
 
-        // Get snapshots for current index
-        var leftSnap = getFrame(leftSnapshots, currentIndex);
-        var rightSnap = getFrame(rightSnapshots, currentIndex);
-
         // Render
         var ws = windowSub.window().framebufferSize();
         int w = ws.width(), h = ws.height();
+
+        // Mouse timeline interaction
+        float barStartX = 10f, barEndX = w - 10f;
+        float barTopY = h - 55f, barBotY = barTopY + 16f;
+        hoverFrameIndex = -1;
+        if (mouseY >= barTopY - 10 && mouseY <= barBotY + 10 && maxIndex > 0) {
+            float t = (float)((mouseX - barStartX) / (barEndX - barStartX));
+            t = Math.max(0, Math.min(1, t));
+            hoverFrameIndex = Math.round(t * maxIndex);
+
+            // Snap to nearby anomaly peak (within 8px)
+            float snapThreshold = 8f / (barEndX - barStartX) * maxIndex;
+            for (int pi : anomalyPeakIndices) {
+                if (Math.abs(pi - hoverFrameIndex) < snapThreshold) {
+                    hoverFrameIndex = pi;
+                    break;
+                }
+            }
+
+            if (mouseDown) {
+                currentIndex = hoverFrameIndex;
+                playing = false;
+            }
+        }
+
+        // Get snapshots for current index
+        var leftSnap = getFrame(leftSnapshots, currentIndex);
+        var rightSnap = getFrame(rightSnapshots, currentIndex);
         glViewport(0, 0, w, h);
         glClearColor(0.03f, 0.04f, 0.06f, 1f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -283,6 +324,53 @@ public final class SessionCompareGame implements WorldApplication {
         // Range aggregation panel (below divider diff, above progress bar)
         if (rangeStart >= 0 && rangeEnd >= 0) {
             renderRangeAggregation(halfW, w, h);
+        }
+
+        // Hover cursor + tooltip
+        if (hoverFrameIndex >= 0 && maxIndex > 0) {
+            float hx = 10 + barW * ((float) hoverFrameIndex / maxIndex);
+            // Vertical cursor line
+            textRenderer.drawRect(hx, barY - 8, 1, 22, 1f, 1f, 1f, 0.8f, w, h);
+
+            // Tooltip
+            float tooltipX = Math.min(hx + 4, w - 200);
+            float tooltipY = barY - 65;
+            textRenderer.drawRect(tooltipX - 2, tooltipY - 2, 195, 55, 0.1f, 0.1f, 0.15f, 0.92f, w, h);
+
+            float score = (hoverFrameIndex < perFrameScores.length) ? perFrameScores[hoverFrameIndex] : 0;
+            String scoreBand = score >= 60 ? "SEVERE" : score >= 30 ? "SIGNIFICANT" :
+                                score >= 10 ? "MODERATE" : score >= 1 ? "MINOR" : "OK";
+            textRenderer.drawText(String.format("Frame %d  Score: %.0f [%s]",
+                hoverFrameIndex + 1, score, scoreBand),
+                tooltipX, tooltipY, 1.5f, 0.9f, 0.9f, 0.5f, w, h);
+
+            // Show top delta at this frame
+            var hLeft = getFrame(leftSnapshots, hoverFrameIndex);
+            var hRight = getFrame(rightSnapshots, hoverFrameIndex);
+            float ftD = hRight.summary().frameTimeMs() - hLeft.summary().frameTimeMs();
+            if (Math.abs(ftD) > 0.1f) {
+                float cr = ftD > 0 ? 1f : 0.3f;
+                float cg = ftD > 0 ? 0.3f : 1f;
+                textRenderer.drawText(String.format("frameTime: %+.1fms", ftD),
+                    tooltipX, tooltipY + 13, 1.3f, cr, cg, 0.3f, w, h);
+            }
+
+            int alertD = hRight.alerts().size() - hLeft.alerts().size();
+            if (alertD != 0) {
+                float cr = alertD > 0 ? 1f : 0.3f;
+                float cg = alertD > 0 ? 0.3f : 1f;
+                textRenderer.drawText(String.format("alerts: %+d", alertD),
+                    tooltipX, tooltipY + 26, 1.3f, cr, cg, 0.3f, w, h);
+            }
+
+            // Check if near anomaly peak
+            for (int pi : anomalyPeakIndices) {
+                if (pi == hoverFrameIndex) {
+                    textRenderer.drawText("^ ANOMALY PEAK",
+                        tooltipX, tooltipY + 39, 1.3f, 1f, 0.4f, 0.2f, w, h);
+                    break;
+                }
+            }
         }
 
         // Status
