@@ -54,13 +54,14 @@ public final class SessionCompareGame implements WorldApplication {
     static final ActionId RANGE_START = new ActionId("rangeStart");
     static final ActionId RANGE_END = new ActionId("rangeEnd");
     static final ActionId RANGE_CLEAR = new ActionId("rangeClear");
+    static final ActionId EXPORT_REPORT = new ActionId("exportReport");
     static final ActionId QUIT = new ActionId("quit");
     private static final ContextId CTX = new ContextId("compare");
     private static final int KEY_SPACE = 32, KEY_COMMA = 44, KEY_PERIOD = 46;
     private static final int KEY_HOME = 268, KEY_END = 269, KEY_ESC = 256;
     private static final int KEY_1 = 49, KEY_2 = 50, KEY_3 = 51, KEY_TAB = 258;
     private static final int KEY_N = 78, KEY_B = 66;
-    private static final int KEY_LEFT_BRACKET = 91, KEY_RIGHT_BRACKET = 93, KEY_R = 82;
+    private static final int KEY_LEFT_BRACKET = 91, KEY_RIGHT_BRACKET = 93, KEY_R = 82, KEY_E = 69;
 
     private final WindowSubsystem windowSub;
     private final WindowInputSubsystem inputSub;
@@ -112,6 +113,7 @@ public final class SessionCompareGame implements WorldApplication {
                     Map.entry(RANGE_START, List.of(new KeyBinding(KEY_LEFT_BRACKET, 0))),
                     Map.entry(RANGE_END, List.of(new KeyBinding(KEY_RIGHT_BRACKET, 0))),
                     Map.entry(RANGE_CLEAR, List.of(new KeyBinding(KEY_R, 0))),
+                    Map.entry(EXPORT_REPORT, List.of(new KeyBinding(KEY_E, 0))),
                     Map.entry(QUIT, List.of(new KeyBinding(KEY_ESC, 0)))),
                 Map.of(),
                 false);
@@ -165,6 +167,7 @@ public final class SessionCompareGame implements WorldApplication {
             if (frame.pressed(RANGE_START)) { rangeStart = currentIndex; System.out.println("Range start: " + (rangeStart + 1)); }
             if (frame.pressed(RANGE_END)) { rangeEnd = currentIndex; System.out.println("Range end: " + (rangeEnd + 1)); }
             if (frame.pressed(RANGE_CLEAR)) { rangeStart = rangeEnd = -1; System.out.println("Range cleared"); }
+            if (frame.pressed(EXPORT_REPORT)) exportReport();
         }
 
         // Auto-advance
@@ -589,6 +592,179 @@ public final class SessionCompareGame implements WorldApplication {
             y += lineH;
             if (++shown >= 4) break;
         }
+    }
+
+    // --- Report export ---
+
+    private void exportReport() {
+        var sb = new StringBuilder(4096);
+        sb.append("{\n");
+
+        // Sessions
+        sb.append("  \"left\": {");
+        sb.append("\"file\": \"").append(escape(leftFile)).append("\"");
+        if (leftMeta != null) {
+            sb.append(", \"scenario\": \"").append(escape(leftMeta.scenario())).append("\"");
+            sb.append(", \"recordedAt\": \"").append(escape(leftMeta.recordedAt())).append("\"");
+            sb.append(", \"frames\": ").append(leftMeta.frameCount());
+        }
+        sb.append("},\n");
+        sb.append("  \"right\": {");
+        sb.append("\"file\": \"").append(escape(rightFile)).append("\"");
+        if (rightMeta != null) {
+            sb.append(", \"scenario\": \"").append(escape(rightMeta.scenario())).append("\"");
+            sb.append(", \"recordedAt\": \"").append(escape(rightMeta.recordedAt())).append("\"");
+            sb.append(", \"frames\": ").append(rightMeta.frameCount());
+        }
+        sb.append("},\n");
+
+        // Overall stats
+        float maxScore = 0, sumScore = 0;
+        int maxScoreFrame = 0;
+        for (int i = 0; i < perFrameScores.length; i++) {
+            sumScore += perFrameScores[i];
+            if (perFrameScores[i] > maxScore) { maxScore = perFrameScores[i]; maxScoreFrame = i; }
+        }
+        float avgScore = perFrameScores.length > 0 ? sumScore / perFrameScores.length : 0;
+        String band = maxScore >= 60 ? "SEVERE" : maxScore >= 30 ? "SIGNIFICANT" :
+                       maxScore >= 10 ? "MODERATE" : maxScore >= 1 ? "MINOR" : "NEUTRAL";
+
+        sb.append("  \"totalFrames\": ").append(maxIndex + 1).append(",\n");
+        sb.append("  \"maxRegressionScore\": ").append(String.format("%.1f", maxScore)).append(",\n");
+        sb.append("  \"maxScoreFrame\": ").append(maxScoreFrame + 1).append(",\n");
+        sb.append("  \"avgRegressionScore\": ").append(String.format("%.2f", avgScore)).append(",\n");
+        sb.append("  \"severityBand\": \"").append(band).append("\",\n");
+        sb.append("  \"anomalyPeakCount\": ").append(anomalyPeakIndices.length).append(",\n");
+
+        // Top anomaly peaks
+        sb.append("  \"topAnomalyPeaks\": [\n");
+        int peaksToShow = Math.min(10, anomalyPeakIndices.length);
+        // Sort by score descending
+        var sortedPeaks = new java.util.ArrayList<int[]>();
+        for (int pi : anomalyPeakIndices) sortedPeaks.add(new int[]{pi, (int)(perFrameScores[pi] * 10)});
+        sortedPeaks.sort((a, b) -> Integer.compare(b[1], a[1]));
+        for (int i = 0; i < peaksToShow; i++) {
+            var peak = sortedPeaks.get(i);
+            sb.append("    {\"frame\": ").append(peak[0] + 1)
+              .append(", \"score\": ").append(peak[1] / 10.0).append("}");
+            if (i < peaksToShow - 1) sb.append(",");
+            sb.append("\n");
+        }
+        sb.append("  ],\n");
+
+        // Top contributors (from max-score frame)
+        var leftMax = getFrame(leftSnapshots, maxScoreFrame);
+        var rightMax = getFrame(rightSnapshots, maxScoreFrame);
+        sb.append("  \"topContributorsAtPeak\": [\n");
+        var contributors = computeContributors(leftMax, rightMax);
+        for (int i = 0; i < Math.min(8, contributors.size()); i++) {
+            var c = contributors.get(i);
+            sb.append("    {\"name\": \"").append(escape(c.name))
+              .append("\", \"contribution\": ").append(String.format("%.1f", c.contribution))
+              .append(", \"delta\": ").append(String.format("%.2f", c.delta)).append("}");
+            if (i < Math.min(8, contributors.size()) - 1) sb.append(",");
+            sb.append("\n");
+        }
+        sb.append("  ],\n");
+
+        // Range stats if active
+        if (rangeStart >= 0 && rangeEnd >= 0) {
+            int rA = Math.min(rangeStart, rangeEnd);
+            int rB = Math.max(rangeStart, rangeEnd);
+            int count = rB - rA + 1;
+            double rangeSumScore = 0;
+            for (int i = rA; i <= rB; i++) {
+                if (i < perFrameScores.length) rangeSumScore += perFrameScores[i];
+            }
+            sb.append("  \"selectedRange\": {");
+            sb.append("\"start\": ").append(rA + 1);
+            sb.append(", \"end\": ").append(rB + 1);
+            sb.append(", \"frames\": ").append(count);
+            sb.append(", \"avgScore\": ").append(String.format("%.2f", rangeSumScore / count));
+            sb.append("},\n");
+        }
+
+        // Alert summary
+        var allNewAlerts = new java.util.LinkedHashSet<String>();
+        var allResolvedAlerts = new java.util.LinkedHashSet<String>();
+        for (int i = 0; i <= maxIndex; i++) {
+            var left = getFrame(leftSnapshots, i);
+            var right = getFrame(rightSnapshots, i);
+            for (var ra : right.alerts()) {
+                if (left.alerts().stream().noneMatch(a -> a.ruleName().equals(ra.ruleName())))
+                    allNewAlerts.add(ra.ruleName());
+            }
+            for (var la : left.alerts()) {
+                if (right.alerts().stream().noneMatch(a -> a.ruleName().equals(la.ruleName())))
+                    allResolvedAlerts.add(la.ruleName());
+            }
+        }
+        sb.append("  \"newAlerts\": [");
+        sb.append(String.join(", ", allNewAlerts.stream().map(a -> "\"" + escape(a) + "\"").toList()));
+        sb.append("],\n");
+        sb.append("  \"resolvedAlerts\": [");
+        sb.append(String.join(", ", allResolvedAlerts.stream().map(a -> "\"" + escape(a) + "\"").toList()));
+        sb.append("]\n");
+
+        sb.append("}\n");
+
+        // Write
+        try {
+            java.nio.file.Files.writeString(java.nio.file.Path.of("compare-report.json"), sb.toString());
+            System.out.println("Report exported: compare-report.json");
+            System.out.printf("  Max score: %.1f [%s] at frame %d%n", maxScore, band, maxScoreFrame + 1);
+            System.out.printf("  Avg score: %.2f  Peaks: %d%n", avgScore, anomalyPeakIndices.length);
+            System.out.printf("  New alerts: %d  Resolved: %d%n", allNewAlerts.size(), allResolvedAlerts.size());
+        } catch (java.io.IOException e) {
+            System.err.println("Failed to export report: " + e.getMessage());
+        }
+    }
+
+    private java.util.List<ScoreContributor> computeContributors(DebugViewSnapshot left, DebugViewSnapshot right) {
+        var contributors = new java.util.ArrayList<ScoreContributor>();
+
+        float ftDelta = right.summary().frameTimeMs() - left.summary().frameTimeMs();
+        if (ftDelta > DELTA_THRESHOLD) contributors.add(new ScoreContributor("frameTimeMs", ftDelta * W_FRAME_TIME, ftDelta));
+
+        float budgetDelta = right.summary().budgetPercent() - left.summary().budgetPercent();
+        if (budgetDelta > 1f) contributors.add(new ScoreContributor("budget%", budgetDelta * W_BUDGET, budgetDelta));
+
+        int alertDelta = right.alerts().size() - left.alerts().size();
+        if (alertDelta > 0) contributors.add(new ScoreContributor("alerts", alertDelta * W_ALERT_COUNT, alertDelta));
+
+        for (var ra : right.alerts()) {
+            boolean isNew = left.alerts().stream().noneMatch(a -> a.ruleName().equals(ra.ruleName()));
+            if (isNew) {
+                float w = "ERROR".equals(ra.severity()) ? W_NEW_ERROR : W_NEW_WARNING;
+                contributors.add(new ScoreContributor("new:" + ra.ruleName(), w, 1));
+            }
+        }
+
+        for (var catKey : left.categories().keySet()) {
+            var lc = left.categories().get(catKey);
+            var rc = right.categories().get(catKey);
+            if (rc == null) continue;
+            for (var se : lc.sources().entrySet()) {
+                var rs = rc.sources().get(se.getKey());
+                if (rs == null) continue;
+                for (var me : se.getValue().entrySet()) {
+                    String rv = rs.get(me.getKey());
+                    if (rv == null) continue;
+                    try {
+                        double d = Double.parseDouble(rv) - Double.parseDouble(me.getValue());
+                        if (d > DELTA_THRESHOLD) contributors.add(new ScoreContributor(me.getKey(), (float)(d * W_METRIC), d));
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+
+        contributors.sort((a, b) -> Float.compare(b.contribution, a.contribution));
+        return contributors;
+    }
+
+    private static String escape(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private static String truncate(String s, int max) {
