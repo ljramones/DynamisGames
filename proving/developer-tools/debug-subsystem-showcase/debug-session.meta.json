@@ -1,0 +1,11 @@
+{
+  "engineVersion": "1.0.0-SNAPSHOT",
+  "backend": "opengl",
+  "scenario": "debug-subsystem-showcase",
+  "recordedAt": "2026-03-24T01:01:21.059157Z",
+  "frameCount": 4466,
+  "firstTick": 1,
+  "lastTick": 4466,
+  "durationSeconds": 78.85518,
+  "bookmarks": []
+}
