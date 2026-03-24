@@ -14,6 +14,8 @@ import org.dynamisengine.ui.debug.builder.DebugOverlayBuilder;
 import org.dynamisengine.ui.debug.builder.DebugViewSnapshot;
 import org.dynamisengine.ui.debug.export.DebugSessionMetadata;
 import org.dynamisengine.ui.debug.export.DebugSnapshotReplayLoader;
+import org.dynamisengine.ui.debug.export.InvestigationWindow;
+import org.dynamisengine.ui.debug.export.SessionBundle;
 import org.dynamisengine.ui.debug.model.DebugOverlayPanel;
 import org.dynamisengine.ui.debug.render.DebugOverlayRenderer;
 import org.dynamisengine.ui.debug.runtime.DebugOverlayOptions;
@@ -68,6 +70,9 @@ public final class SessionPlayerGame implements WorldApplication {
     static final ActionId BOOKMARK = new ActionId("bookmark");
     static final ActionId NEXT_BOOKMARK = new ActionId("nextBookmark");
     static final ActionId LABEL_BOOKMARK = new ActionId("labelBookmark");
+    static final ActionId SAVE_WINDOW = new ActionId("saveWindow");
+    static final ActionId NEXT_WINDOW = new ActionId("nextWindow");
+    static final ActionId PREV_WINDOW = new ActionId("prevWindow");
     static final ActionId QUIT = new ActionId("quit");
     private static final ContextId CTX = new ContextId("player");
     private static final int KEY_TAB = 258, KEY_F = 70, KEY_SPACE = 32;
@@ -76,6 +81,7 @@ public final class SessionPlayerGame implements WorldApplication {
     private static final int KEY_HOME = 268, KEY_END = 269;
     private static final int KEY_1 = 49, KEY_2 = 50, KEY_3 = 51;
     private static final int KEY_N = 78, KEY_B = 66, KEY_M = 77, KEY_J = 74, KEY_L = 76;
+    private static final int KEY_K = 75, KEY_SEMICOLON = 59, KEY_APOSTROPHE = 39;
 
     private final GlfwWindowSubsystem windowSub;
     private final InputWorldSubsystem inputSub;
@@ -99,6 +105,7 @@ public final class SessionPlayerGame implements WorldApplication {
     private final java.util.List<DebugSessionMetadata.Bookmark> bookmarks = new java.util.ArrayList<>();
     private DebugSessionMetadata metadata;
     private Path metadataPath;
+    private int currentWindowIndex = -1; // -1 = no window active
 
     // Preset labels for quick labeling (cycle with L)
     private static final String[] PRESET_LABELS = {
@@ -133,6 +140,9 @@ public final class SessionPlayerGame implements WorldApplication {
                     Map.entry(BOOKMARK, List.of(new KeyBinding(KEY_M, 0))),
                     Map.entry(NEXT_BOOKMARK, List.of(new KeyBinding(KEY_J, 0))),
                     Map.entry(LABEL_BOOKMARK, List.of(new KeyBinding(KEY_L, 0))),
+                    Map.entry(SAVE_WINDOW, List.of(new KeyBinding(KEY_K, 0))),
+                    Map.entry(NEXT_WINDOW, List.of(new KeyBinding(KEY_APOSTROPHE, 0))),
+                    Map.entry(PREV_WINDOW, List.of(new KeyBinding(KEY_SEMICOLON, 0))),
                     Map.entry(QUIT, List.of(new KeyBinding(KEY_ESC, 0)))),
                 Map.of(),
                 false);
@@ -190,10 +200,19 @@ public final class SessionPlayerGame implements WorldApplication {
             System.out.println("No metadata sidecar found (optional)");
         }
 
+        // Print windows if present
+        if (metadata != null && !metadata.windows().isEmpty()) {
+            System.out.println("Investigation windows:");
+            for (var w : metadata.windows()) {
+                System.out.printf("  [%s] frames %d-%d (%d frames)%n",
+                    w.name(), w.startFrame() + 1, w.endFrame() + 1, w.frameCount());
+            }
+        }
+
         currentIndex = 0;
         playing = false;
 
-        System.out.println("Space=play  ,/.=step  N/B=event  M=bookmark  J=next bookmark  F=focus  Esc=quit");
+        System.out.println("Space=play  N/B=event  M=bm  K=save window  ;/'=cycle windows  F=focus  Esc=quit");
     }
 
     @Override
@@ -220,6 +239,9 @@ public final class SessionPlayerGame implements WorldApplication {
             if (frame.pressed(BOOKMARK)) addBookmark();
             if (frame.pressed(NEXT_BOOKMARK)) jumpToNextBookmark();
             if (frame.pressed(LABEL_BOOKMARK)) cycleLabelOnCurrentBookmark();
+            if (frame.pressed(SAVE_WINDOW)) saveCurrentWindow();
+            if (frame.pressed(NEXT_WINDOW)) jumpToNextWindow();
+            if (frame.pressed(PREV_WINDOW)) jumpToPrevWindow();
         }
 
         // Auto-advance when playing
@@ -300,12 +322,14 @@ public final class SessionPlayerGame implements WorldApplication {
                 .map(b -> b.label().isEmpty() ? "  [bookmarked]" : "  [" + b.label() + "]")
                 .orElse("");
             String bmInfo = bookmarks.isEmpty() ? "" : "  BM:" + bookmarks.size() + bmLabel;
-            textRenderer.drawText(String.format("[%s]  Frame %d/%d  Tick: %d  Events: %d%s",
+            int winCount = metadata != null ? metadata.windows().size() : 0;
+            String winInfo = winCount > 0 ? "  Win:" + winCount : "";
+            textRenderer.drawText(String.format("[%s]  Frame %d/%d  Tick: %d  Events: %d%s%s",
                 playState, currentIndex + 1, snapshots.size(), snapshot.tick(),
-                eventFrameIndices.length, bmInfo),
+                eventFrameIndices.length, bmInfo, winInfo),
                 10, h - 45, 2.0f, 0.8f, 0.8f, 0.4f, w, h);
             textRenderer.drawText(
-                "Space=play  ,/.=step  N/B=event  M=bookmark  J=next bookmark  F=focus  Esc=quit",
+                "Space=play  N/B=event  M=bm  K=window  ;/'=cycle win  F=focus  Esc=quit",
                 10, h - 20, 1.6f, 0.4f, 0.4f, 0.5f, w, h);
             textRenderer.endFrame();
         }
@@ -443,5 +467,55 @@ public final class SessionPlayerGame implements WorldApplication {
         currentIndex = first.frameIndex();
         playing = false;
         System.out.printf("-> Bookmark: frame %d [%s]%n", currentIndex + 1, first.label());
+    }
+
+    // --- Investigation windows ---
+
+    private void saveCurrentWindow() {
+        if (metadata == null) return;
+        // Use bookmarks as range markers: if we have 2+ bookmarks, save range between last two
+        // Otherwise save a 60-frame window centered on current index
+        int start, end;
+        if (bookmarks.size() >= 2) {
+            var sorted = bookmarks.stream()
+                .sorted(java.util.Comparator.comparingInt(DebugSessionMetadata.Bookmark::frameIndex))
+                .toList();
+            start = sorted.get(sorted.size() - 2).frameIndex();
+            end = sorted.getLast().frameIndex();
+        } else {
+            start = Math.max(0, currentIndex - 30);
+            end = Math.min(snapshots.size() - 1, currentIndex + 30);
+        }
+
+        // Auto-generate name from frame state
+        var snap = snapshots.get(currentIndex);
+        String name;
+        if (!snap.alerts().isEmpty()) {
+            name = snap.alerts().getFirst().ruleName() + " window";
+        } else {
+            name = "window at T" + snap.tick();
+        }
+
+        metadata.addWindow(name, start, end);
+        System.out.printf("Window saved: [%s] frames %d-%d (%d frames)%n",
+            name, start + 1, end + 1, end - start + 1);
+    }
+
+    private void jumpToNextWindow() {
+        if (metadata == null || metadata.windows().isEmpty()) return;
+        currentWindowIndex = (currentWindowIndex + 1) % metadata.windows().size();
+        var w = metadata.windows().get(currentWindowIndex);
+        currentIndex = w.startFrame();
+        playing = false;
+        System.out.printf("-> Window [%s]: frames %d-%d%n", w.name(), w.startFrame() + 1, w.endFrame() + 1);
+    }
+
+    private void jumpToPrevWindow() {
+        if (metadata == null || metadata.windows().isEmpty()) return;
+        currentWindowIndex = (currentWindowIndex - 1 + metadata.windows().size()) % metadata.windows().size();
+        var w = metadata.windows().get(currentWindowIndex);
+        currentIndex = w.startFrame();
+        playing = false;
+        System.out.printf("-> Window [%s]: frames %d-%d%n", w.name(), w.startFrame() + 1, w.endFrame() + 1);
     }
 }
