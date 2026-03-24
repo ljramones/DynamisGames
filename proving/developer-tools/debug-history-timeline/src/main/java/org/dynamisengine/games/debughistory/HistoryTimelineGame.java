@@ -2,8 +2,8 @@ package org.dynamisengine.games.debughistory;
 
 import org.dynamisengine.light.impl.opengl.OpenGlDebugOverlayRenderer;
 import org.dynamisengine.light.impl.opengl.OpenGlTextRenderer;
-import org.dynamisengine.games.proving.ProvingInputSubsystem;
-import org.dynamisengine.games.proving.ProvingWindowSubsystem;
+import org.dynamisengine.input.runtime.InputWorldSubsystem;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
 
 import org.dynamisengine.debug.api.DebugCategory;
 import org.dynamisengine.debug.api.DebugSeverity;
@@ -71,8 +71,8 @@ public final class HistoryTimelineGame implements WorldApplication {
     private static final float SPIKE_DURATION = 2f;
     private static final float RECOVERY_DURATION = 4f;
 
-    private final ProvingWindowSubsystem windowSub;
-    private final ProvingInputSubsystem inputSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final InputWorldSubsystem inputSub;
     private final OpenGlTextRenderer textRenderer = new OpenGlTextRenderer();
     private OpenGlDebugOverlayRenderer overlayRenderer;
 
@@ -95,7 +95,7 @@ public final class HistoryTimelineGame implements WorldApplication {
     private float simPhysicsStepMs = 1.0f;
     private float simAudioVoices = 8f;
 
-    public HistoryTimelineGame(ProvingWindowSubsystem w, ProvingInputSubsystem i) {
+    public HistoryTimelineGame(GlfwWindowSubsystem w, InputWorldSubsystem i) {
         this.windowSub = w;
         this.inputSub = i;
     }

@@ -2,8 +2,8 @@ package org.dynamisengine.games.debugremote;
 
 import org.dynamisengine.light.impl.opengl.OpenGlDebugOverlayRenderer;
 import org.dynamisengine.light.impl.opengl.OpenGlTextRenderer;
-import org.dynamisengine.games.proving.ProvingInputSubsystem;
-import org.dynamisengine.games.proving.ProvingWindowSubsystem;
+import org.dynamisengine.input.runtime.InputWorldSubsystem;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
 
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
@@ -59,8 +59,8 @@ public final class RemoteViewerGame implements WorldApplication {
     private static final int KEY_LEFT_BRACKET = 91, KEY_RIGHT_BRACKET = 93;
     private static final int KEY_COMMA = 44, KEY_PERIOD = 46, KEY_ESC = 256;
 
-    private final ProvingWindowSubsystem windowSub;
-    private final ProvingInputSubsystem inputSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final InputWorldSubsystem inputSub;
     private final String host;
     private final int port;
 
@@ -75,7 +75,7 @@ public final class RemoteViewerGame implements WorldApplication {
     private int lastPanelCount;
     private int replayIndex; // index into received history for replay
 
-    public RemoteViewerGame(ProvingWindowSubsystem w, ProvingInputSubsystem i, String host, int port) {
+    public RemoteViewerGame(GlfwWindowSubsystem w, InputWorldSubsystem i, String host, int port) {
         this.windowSub = w;
         this.inputSub = i;
         this.host = host;

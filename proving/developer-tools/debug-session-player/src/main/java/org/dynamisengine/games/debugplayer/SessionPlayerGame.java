@@ -2,8 +2,8 @@ package org.dynamisengine.games.debugplayer;
 
 import org.dynamisengine.light.impl.opengl.OpenGlDebugOverlayRenderer;
 import org.dynamisengine.light.impl.opengl.OpenGlTextRenderer;
-import org.dynamisengine.games.proving.ProvingInputSubsystem;
-import org.dynamisengine.games.proving.ProvingWindowSubsystem;
+import org.dynamisengine.input.runtime.InputWorldSubsystem;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
 
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
@@ -77,8 +77,8 @@ public final class SessionPlayerGame implements WorldApplication {
     private static final int KEY_1 = 49, KEY_2 = 50, KEY_3 = 51;
     private static final int KEY_N = 78, KEY_B = 66, KEY_M = 77, KEY_J = 74, KEY_L = 76;
 
-    private final ProvingWindowSubsystem windowSub;
-    private final ProvingInputSubsystem inputSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final InputWorldSubsystem inputSub;
     private final String sessionFile;
 
     private final OpenGlTextRenderer textRenderer = new OpenGlTextRenderer();
@@ -107,7 +107,7 @@ public final class SessionPlayerGame implements WorldApplication {
         "regression", "good baseline"
     };
 
-    public SessionPlayerGame(ProvingWindowSubsystem w, ProvingInputSubsystem i, String sessionFile) {
+    public SessionPlayerGame(GlfwWindowSubsystem w, InputWorldSubsystem i, String sessionFile) {
         this.windowSub = w;
         this.inputSub = i;
         this.sessionFile = sessionFile;

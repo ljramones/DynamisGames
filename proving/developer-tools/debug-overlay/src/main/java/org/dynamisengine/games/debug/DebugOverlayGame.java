@@ -2,8 +2,8 @@ package org.dynamisengine.games.debug;
 
 import org.dynamisengine.light.impl.opengl.OpenGlDebugOverlayRenderer;
 import org.dynamisengine.light.impl.opengl.OpenGlTextRenderer;
-import org.dynamisengine.games.proving.ProvingInputSubsystem;
-import org.dynamisengine.games.proving.ProvingWindowSubsystem;
+import org.dynamisengine.input.runtime.InputWorldSubsystem;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
 
 import org.dynamisengine.audio.api.AcousticConstants;
 import org.dynamisengine.audio.api.AcousticConstants;
@@ -61,8 +61,8 @@ public final class DebugOverlayGame implements WorldApplication {
     private static final ContextId CTX = new ContextId("debug");
     private static final int KEY_SPACE = 32, KEY_TAB = 258, KEY_ESC = 256;
 
-    private final ProvingWindowSubsystem windowSub;
-    private final ProvingInputSubsystem inputSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final InputWorldSubsystem inputSub;
     private final AudioSubsystem audioSub;
     private final OpenGlTextRenderer textRenderer = new OpenGlTextRenderer();
     private final DebugSpineOverlay spineOverlay = new DebugSpineOverlay();
@@ -71,7 +71,7 @@ public final class DebugOverlayGame implements WorldApplication {
     private boolean overlayVisible = true;
     private int particlesSpawned = 0;
 
-    public DebugOverlayGame(ProvingWindowSubsystem w, ProvingInputSubsystem i, AudioSubsystem a) {
+    public DebugOverlayGame(GlfwWindowSubsystem w, InputWorldSubsystem i, AudioSubsystem a) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a;
     }
 

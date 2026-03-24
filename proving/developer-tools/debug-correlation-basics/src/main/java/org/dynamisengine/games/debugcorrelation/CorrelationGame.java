@@ -2,8 +2,8 @@ package org.dynamisengine.games.debugcorrelation;
 
 import org.dynamisengine.light.impl.opengl.OpenGlDebugOverlayRenderer;
 import org.dynamisengine.light.impl.opengl.OpenGlTextRenderer;
-import org.dynamisengine.games.proving.ProvingInputSubsystem;
-import org.dynamisengine.games.proving.ProvingWindowSubsystem;
+import org.dynamisengine.input.runtime.InputWorldSubsystem;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
 
 import org.dynamisengine.debug.api.DebugCategory;
 import org.dynamisengine.debug.api.DebugSeverity;
@@ -70,8 +70,8 @@ public final class CorrelationGame implements WorldApplication {
     private static final int KEY_TAB = 258, KEY_1 = 49, KEY_2 = 50, KEY_3 = 51;
     private static final int KEY_R = 82, KEY_P = 80, KEY_ESC = 256;
 
-    private final ProvingWindowSubsystem windowSub;
-    private final ProvingInputSubsystem inputSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final InputWorldSubsystem inputSub;
     private final OpenGlTextRenderer textRenderer = new OpenGlTextRenderer();
     private OpenGlDebugOverlayRenderer overlayRenderer;
 
@@ -96,7 +96,7 @@ public final class CorrelationGame implements WorldApplication {
     private float simAudioVoices = 8f;
     private float simAudioDspBudget = 25f;
 
-    public CorrelationGame(ProvingWindowSubsystem w, ProvingInputSubsystem i) {
+    public CorrelationGame(GlfwWindowSubsystem w, InputWorldSubsystem i) {
         this.windowSub = w;
         this.inputSub = i;
     }

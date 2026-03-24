@@ -2,8 +2,8 @@ package org.dynamisengine.games.debugdraw;
 
 import org.dynamisengine.light.impl.opengl.OpenGlDebugOverlayRenderer;
 import org.dynamisengine.light.impl.opengl.OpenGlTextRenderer;
-import org.dynamisengine.games.proving.ProvingInputSubsystem;
-import org.dynamisengine.games.proving.ProvingWindowSubsystem;
+import org.dynamisengine.input.runtime.InputWorldSubsystem;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
 
 import org.dynamisengine.collision.bounds.Aabb;
 import org.dynamisengine.collision.contact.ContactManifold3D;
@@ -69,8 +69,8 @@ public final class DebugDrawBasicsGame implements WorldApplication {
     private static final int KEY_1 = 49, KEY_2 = 50, KEY_3 = 51, KEY_4 = 52;
     private static final int KEY_TAB = 258, KEY_ESC = 256;
 
-    private final ProvingWindowSubsystem windowSub;
-    private final ProvingInputSubsystem inputSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final InputWorldSubsystem inputSub;
     private final DebugDrawRenderer renderer = new DebugDrawRenderer();
     private final DebugDrawQueue queue = new DebugDrawQueue();
 
@@ -87,7 +87,7 @@ public final class DebugDrawBasicsGame implements WorldApplication {
     // Synthetic scene data
     private float time = 0f;
 
-    public DebugDrawBasicsGame(ProvingWindowSubsystem windowSub, ProvingInputSubsystem inputSub) {
+    public DebugDrawBasicsGame(GlfwWindowSubsystem windowSub, InputWorldSubsystem inputSub) {
         this.windowSub = windowSub;
         this.inputSub = inputSub;
     }
