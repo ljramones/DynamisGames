@@ -1,7 +1,7 @@
 package org.dynamisengine.games.debug;
 
-import org.dynamisengine.games.proving.OpenGlDebugOverlayRenderer;
-import org.dynamisengine.games.proving.OpenGlTextRenderer;
+import org.dynamisengine.light.impl.opengl.OpenGlDebugOverlayRenderer;
+import org.dynamisengine.light.impl.opengl.OpenGlTextRenderer;
 import org.dynamisengine.games.proving.ProvingInputSubsystem;
 import org.dynamisengine.games.proving.ProvingWindowSubsystem;
 

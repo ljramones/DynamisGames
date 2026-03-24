@@ -45,32 +45,11 @@
       <artifactId>input-core</artifactId>
       <version>1.0.0-SNAPSHOT</version>
     </dependency>
-    <!-- DynamisUI debug overlay SPI -->
+    <!-- DynamisLightEngine OpenGL backend (owns overlay renderer + text renderer) -->
     <dependency>
-      <groupId>org.dynamisengine.ui</groupId>
-      <artifactId>ui-api</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>org.dynamisengine.ui</groupId>
-      <artifactId>ui-core</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>org.dynamisengine.ui</groupId>
-      <artifactId>ui-debug</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
-    </dependency>
-    <!-- LWJGL for OpenGL text/overlay rendering -->
-    <dependency>
-      <groupId>org.lwjgl</groupId>
-      <artifactId>lwjgl-opengl</artifactId>
-      <version>3.3.4</version>
-    </dependency>
-    <dependency>
-      <groupId>org.lwjgl</groupId>
-      <artifactId>lwjgl-stb</artifactId>
-      <version>3.3.4</version>
+      <groupId>org.dynamisengine.light</groupId>
+      <artifactId>engine-impl-opengl</artifactId>
+      <version>0.1.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
 </project>
