@@ -62,6 +62,7 @@ public final class SessionPlayerGame implements WorldApplication {
     static final ActionId PREV_EVENT = new ActionId("prevEvent");
     static final ActionId BOOKMARK = new ActionId("bookmark");
     static final ActionId NEXT_BOOKMARK = new ActionId("nextBookmark");
+    static final ActionId LABEL_BOOKMARK = new ActionId("labelBookmark");
     static final ActionId QUIT = new ActionId("quit");
     private static final ContextId CTX = new ContextId("player");
     private static final int KEY_TAB = 258, KEY_F = 70, KEY_SPACE = 32;
@@ -69,7 +70,7 @@ public final class SessionPlayerGame implements WorldApplication {
     private static final int KEY_COMMA = 44, KEY_PERIOD = 46, KEY_ESC = 256;
     private static final int KEY_HOME = 268, KEY_END = 269;
     private static final int KEY_1 = 49, KEY_2 = 50, KEY_3 = 51;
-    private static final int KEY_N = 78, KEY_B = 66, KEY_M = 77, KEY_J = 74;
+    private static final int KEY_N = 78, KEY_B = 66, KEY_M = 77, KEY_J = 74, KEY_L = 76;
 
     private final WindowSubsystem windowSub;
     private final WindowInputSubsystem inputSub;
@@ -90,9 +91,16 @@ public final class SessionPlayerGame implements WorldApplication {
     private int lastPanelCount;
 
     private int[] eventFrameIndices;
-    private final java.util.List<Integer> bookmarks = new java.util.ArrayList<>();
+    private final java.util.List<DebugSessionMetadata.Bookmark> bookmarks = new java.util.ArrayList<>();
     private DebugSessionMetadata metadata;
     private Path metadataPath;
+
+    // Preset labels for quick labeling (cycle with L)
+    private static final String[] PRESET_LABELS = {
+        "spike", "recovery", "degradation start", "alert onset",
+        "physics issue", "audio issue", "ECS burst", "interesting",
+        "regression", "good baseline"
+    };
 
     public SessionPlayerGame(WindowSubsystem w, WindowInputSubsystem i, String sessionFile) {
         this.windowSub = w;
@@ -119,6 +127,7 @@ public final class SessionPlayerGame implements WorldApplication {
                     Map.entry(PREV_EVENT, List.of(new KeyBinding(KEY_B, 0))),
                     Map.entry(BOOKMARK, List.of(new KeyBinding(KEY_M, 0))),
                     Map.entry(NEXT_BOOKMARK, List.of(new KeyBinding(KEY_J, 0))),
+                    Map.entry(LABEL_BOOKMARK, List.of(new KeyBinding(KEY_L, 0))),
                     Map.entry(QUIT, List.of(new KeyBinding(KEY_ESC, 0)))),
                 Map.of(),
                 false);
@@ -159,13 +168,17 @@ public final class SessionPlayerGame implements WorldApplication {
                     metadata.scenario(), metadata.recordedAt());
                 // Restore bookmarks from metadata
                 for (var bm : metadata.bookmarks()) {
-                    if (!bookmarks.contains(bm.frameIndex())) {
-                        bookmarks.add(bm.frameIndex());
+                    if (bookmarks.stream().noneMatch(b -> b.frameIndex() == bm.frameIndex())) {
+                        bookmarks.add(bm);
                     }
                 }
+                bookmarks.sort(java.util.Comparator.comparingInt(DebugSessionMetadata.Bookmark::frameIndex));
                 if (!bookmarks.isEmpty()) {
-                    bookmarks.sort(Integer::compareTo);
-                    System.out.println("Restored " + bookmarks.size() + " bookmarks from metadata");
+                    System.out.println("Restored " + bookmarks.size() + " bookmarks:");
+                    for (var bm : bookmarks) {
+                        String label = bm.label().isEmpty() ? "(unlabeled)" : bm.label();
+                        System.out.printf("  Frame %d: %s%n", bm.frameIndex() + 1, label);
+                    }
                 }
             }
         } catch (IOException e) {
@@ -201,6 +214,7 @@ public final class SessionPlayerGame implements WorldApplication {
             if (frame.pressed(PREV_EVENT)) jumpToPrevEvent();
             if (frame.pressed(BOOKMARK)) addBookmark();
             if (frame.pressed(NEXT_BOOKMARK)) jumpToNextBookmark();
+            if (frame.pressed(LABEL_BOOKMARK)) cycleLabelOnCurrentBookmark();
         }
 
         // Auto-advance when playing
@@ -262,9 +276,9 @@ public final class SessionPlayerGame implements WorldApplication {
                     float ex = 10 + barW * ((float) ei / Math.max(1, totalFrames - 1));
                     textRenderer.drawRect(ex, barY - 2, 2, 12, 1f, 0.3f, 0.2f, 0.8f, w, h);
                 }
-                // Draw bookmark markers
-                for (int bi : bookmarks) {
-                    float bx = 10 + barW * ((float) bi / Math.max(1, totalFrames - 1));
+                // Draw bookmark markers (blue ticks, with labels)
+                for (var bm : bookmarks) {
+                    float bx = 10 + barW * ((float) bm.frameIndex() / Math.max(1, totalFrames - 1));
                     textRenderer.drawRect(bx, barY - 3, 2, 14, 0.3f, 0.7f, 1f, 0.9f, w, h);
                 }
                 // Draw progress position
@@ -274,7 +288,13 @@ public final class SessionPlayerGame implements WorldApplication {
 
             // Status
             String playState = playing ? "PLAYING " + playbackSpeed + "x" : "PAUSED";
-            String bmInfo = bookmarks.isEmpty() ? "" : "  Bookmarks: " + bookmarks.size();
+            // Show bookmark label if current frame is bookmarked
+            String bmLabel = bookmarks.stream()
+                .filter(b -> b.frameIndex() == currentIndex)
+                .findFirst()
+                .map(b -> b.label().isEmpty() ? "  [bookmarked]" : "  [" + b.label() + "]")
+                .orElse("");
+            String bmInfo = bookmarks.isEmpty() ? "" : "  BM:" + bookmarks.size() + bmLabel;
             textRenderer.drawText(String.format("[%s]  Frame %d/%d  Tick: %d  Events: %d%s",
                 playState, currentIndex + 1, snapshots.size(), snapshot.tick(),
                 eventFrameIndices.length, bmInfo),
@@ -301,8 +321,8 @@ public final class SessionPlayerGame implements WorldApplication {
                 }
             }
             metadata.bookmarks().clear();
-            for (int bi : bookmarks) {
-                metadata.addBookmark(bi, "");
+            for (var bm : bookmarks) {
+                metadata.addBookmark(bm.frameIndex(), bm.label());
             }
             try {
                 java.nio.file.Files.writeString(metadataPath, metadata.toJson());
@@ -361,24 +381,62 @@ public final class SessionPlayerGame implements WorldApplication {
     }
 
     private void addBookmark() {
-        if (!bookmarks.contains(currentIndex)) {
-            bookmarks.add(currentIndex);
-            bookmarks.sort(Integer::compareTo);
-            System.out.println("Bookmark added at frame " + (currentIndex + 1));
+        if (bookmarks.stream().anyMatch(b -> b.frameIndex() == currentIndex)) return;
+
+        // Auto-generate label from current frame state
+        var snap = snapshots.get(currentIndex);
+        String autoLabel = generateAutoLabel(snap);
+
+        bookmarks.add(new DebugSessionMetadata.Bookmark(currentIndex, autoLabel));
+        bookmarks.sort(java.util.Comparator.comparingInt(DebugSessionMetadata.Bookmark::frameIndex));
+        System.out.printf("Bookmark: frame %d [%s]%n", currentIndex + 1, autoLabel);
+    }
+
+    private void cycleLabelOnCurrentBookmark() {
+        for (int i = 0; i < bookmarks.size(); i++) {
+            if (bookmarks.get(i).frameIndex() == currentIndex) {
+                String currentLabel = bookmarks.get(i).label();
+                // Find current label in presets and cycle to next
+                int presetIdx = -1;
+                for (int j = 0; j < PRESET_LABELS.length; j++) {
+                    if (PRESET_LABELS[j].equals(currentLabel)) { presetIdx = j; break; }
+                }
+                String newLabel = PRESET_LABELS[(presetIdx + 1) % PRESET_LABELS.length];
+                bookmarks.set(i, new DebugSessionMetadata.Bookmark(currentIndex, newLabel));
+                System.out.printf("Bookmark relabeled: frame %d [%s]%n", currentIndex + 1, newLabel);
+                return;
+            }
         }
+        // No bookmark at current frame — create one first
+        addBookmark();
+    }
+
+    private String generateAutoLabel(DebugViewSnapshot snap) {
+        if (!snap.alerts().isEmpty()) {
+            var first = snap.alerts().getFirst();
+            return first.ruleName();
+        }
+        if (!snap.timelineEvents().isEmpty()) {
+            var last = snap.timelineEvents().getLast();
+            return last.name();
+        }
+        return "T" + snap.tick();
     }
 
     private void jumpToNextBookmark() {
         if (bookmarks.isEmpty()) return;
-        for (int bi : bookmarks) {
-            if (bi > currentIndex) {
-                currentIndex = bi;
+        for (var bm : bookmarks) {
+            if (bm.frameIndex() > currentIndex) {
+                currentIndex = bm.frameIndex();
                 playing = false;
+                System.out.printf("-> Bookmark: frame %d [%s]%n", currentIndex + 1, bm.label());
                 return;
             }
         }
-        // Wrap to first bookmark
-        currentIndex = bookmarks.getFirst();
+        // Wrap to first
+        var first = bookmarks.getFirst();
+        currentIndex = first.frameIndex();
         playing = false;
+        System.out.printf("-> Bookmark: frame %d [%s]%n", currentIndex + 1, first.label());
     }
 }
