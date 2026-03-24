@@ -198,6 +198,9 @@ public final class SessionCompareGame implements WorldApplication {
         // Divider line
         textRenderer.drawRect(halfW - 1, 0, 2, h - 60, 0.4f, 0.4f, 0.4f, 0.8f, w, h);
 
+        // Diff summary at center
+        renderDiffSummary(leftSnap, rightSnap, halfW, w, h);
+
         // Progress bar
         float barY = h - 55;
         float barW = w - 20;
@@ -239,6 +242,115 @@ public final class SessionCompareGame implements WorldApplication {
         } catch (IOException e) {
             System.err.printf("[%s] Failed to load: %s%n", label, e.getMessage());
             return List.of();
+        }
+    }
+
+    // --- Diff rendering ---
+
+    private static final float DELTA_THRESHOLD = 0.5f; // ignore deltas below this
+
+    private void renderDiffSummary(DebugViewSnapshot left, DebugViewSnapshot right,
+                                    int centerX, int w, int h) {
+        float x = centerX + 6;
+        float y = 20;
+        float scale = 1.5f;
+        float lineH = 12f;
+
+        // Summary delta
+        float leftFt = left.summary().frameTimeMs();
+        float rightFt = right.summary().frameTimeMs();
+        float ftDelta = rightFt - leftFt;
+        if (Math.abs(ftDelta) > DELTA_THRESHOLD) {
+            String sign = ftDelta > 0 ? "+" : "";
+            float r = ftDelta > 0 ? 1f : 0.3f;
+            float g = ftDelta > 0 ? 0.3f : 1f;
+            textRenderer.drawText(String.format("frame: %s%.1fms", sign, ftDelta),
+                x, y, scale, r, g, 0.3f, w, h);
+            y += lineH;
+        }
+
+        float leftBudget = left.summary().budgetPercent();
+        float rightBudget = right.summary().budgetPercent();
+        float budgetDelta = rightBudget - leftBudget;
+        if (Math.abs(budgetDelta) > 1f) {
+            String sign = budgetDelta > 0 ? "+" : "";
+            float r = budgetDelta > 0 ? 1f : 0.3f;
+            float g = budgetDelta > 0 ? 0.3f : 1f;
+            textRenderer.drawText(String.format("budget: %s%.0f%%", sign, budgetDelta),
+                x, y, scale, r, g, 0.3f, w, h);
+            y += lineH;
+        }
+
+        // Alert count delta
+        int leftAlerts = left.alerts().size();
+        int rightAlerts = right.alerts().size();
+        int alertDelta = rightAlerts - leftAlerts;
+        if (alertDelta != 0) {
+            String sign = alertDelta > 0 ? "+" : "";
+            float r = alertDelta > 0 ? 1f : 0.3f;
+            float g = alertDelta > 0 ? 0.3f : 1f;
+            textRenderer.drawText(String.format("alerts: %s%d", sign, alertDelta),
+                x, y, scale, r, g, 0.3f, w, h);
+            y += lineH;
+        }
+
+        // Per-category metric deltas
+        for (var catKey : left.categories().keySet()) {
+            var leftCat = left.categories().get(catKey);
+            var rightCat = right.categories().get(catKey);
+            if (rightCat == null) continue;
+
+            for (var srcEntry : leftCat.sources().entrySet()) {
+                var rightSrc = rightCat.sources().get(srcEntry.getKey());
+                if (rightSrc == null) continue;
+
+                for (var metricEntry : srcEntry.getValue().entrySet()) {
+                    String rightVal = rightSrc.get(metricEntry.getKey());
+                    if (rightVal == null) continue;
+
+                    try {
+                        double lv = Double.parseDouble(metricEntry.getValue());
+                        double rv = Double.parseDouble(rightVal);
+                        double delta = rv - lv;
+                        if (Math.abs(delta) > DELTA_THRESHOLD) {
+                            String sign = delta > 0 ? "+" : "";
+                            // For most metrics, higher = worse (red)
+                            float r = delta > 0 ? 0.9f : 0.3f;
+                            float g = delta > 0 ? 0.4f : 0.9f;
+                            String name = metricEntry.getKey();
+                            if (name.length() > 12) name = name.substring(0, 12);
+                            textRenderer.drawText(String.format("%s: %s%.1f", name, sign, delta),
+                                x, y, scale * 0.85f, r, g, 0.3f, w, h);
+                            y += lineH;
+                            if (y > h - 80) return; // stop if running out of space
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+
+        // New alerts in right (regression indicators)
+        for (var rightAlert : right.alerts()) {
+            boolean isNew = left.alerts().stream()
+                .noneMatch(a -> a.ruleName().equals(rightAlert.ruleName()));
+            if (isNew) {
+                textRenderer.drawText("NEW: " + rightAlert.ruleName(),
+                    x, y, scale * 0.85f, 1f, 0.2f, 0.2f, w, h);
+                y += lineH;
+                if (y > h - 80) return;
+            }
+        }
+
+        // Resolved alerts (improvement indicators)
+        for (var leftAlert : left.alerts()) {
+            boolean resolved = right.alerts().stream()
+                .noneMatch(a -> a.ruleName().equals(leftAlert.ruleName()));
+            if (resolved) {
+                textRenderer.drawText("RESOLVED: " + leftAlert.ruleName(),
+                    x, y, scale * 0.85f, 0.2f, 1f, 0.3f, w, h);
+                y += lineH;
+                if (y > h - 80) return;
+            }
         }
     }
 
