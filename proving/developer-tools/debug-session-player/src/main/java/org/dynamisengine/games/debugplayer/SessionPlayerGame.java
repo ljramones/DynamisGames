@@ -412,13 +412,13 @@ public final class SessionPlayerGame implements WorldApplication {
     private void addBookmark() {
         if (bookmarks.stream().anyMatch(b -> b.frameIndex() == currentIndex)) return;
 
-        // Auto-generate label from current frame state
         var snap = snapshots.get(currentIndex);
         String autoLabel = generateAutoLabel(snap);
+        String autoNote = generateAutoNote(snap);
 
-        bookmarks.add(new DebugSessionMetadata.Bookmark(currentIndex, autoLabel));
+        bookmarks.add(new DebugSessionMetadata.Bookmark(currentIndex, autoLabel, autoNote));
         bookmarks.sort(java.util.Comparator.comparingInt(DebugSessionMetadata.Bookmark::frameIndex));
-        System.out.printf("Bookmark: frame %d [%s]%n", currentIndex + 1, autoLabel);
+        System.out.printf("Bookmark: frame %d [%s] %s%n", currentIndex + 1, autoLabel, autoNote);
     }
 
     private void cycleLabelOnCurrentBookmark() {
@@ -442,14 +442,33 @@ public final class SessionPlayerGame implements WorldApplication {
 
     private String generateAutoLabel(DebugViewSnapshot snap) {
         if (!snap.alerts().isEmpty()) {
-            var first = snap.alerts().getFirst();
-            return first.ruleName();
+            return snap.alerts().getFirst().ruleName();
         }
         if (!snap.timelineEvents().isEmpty()) {
-            var last = snap.timelineEvents().getLast();
-            return last.name();
+            return snap.timelineEvents().getLast().name();
         }
         return "T" + snap.tick();
+    }
+
+    /** Generate a rich context note from the current frame state. */
+    private String generateAutoNote(DebugViewSnapshot snap) {
+        var sb = new StringBuilder();
+        sb.append("Tick ").append(snap.tick());
+        sb.append(", frame=").append(String.format("%.1fms", snap.summary().frameTimeMs()));
+        sb.append(", budget=").append(String.format("%.0f%%", snap.summary().budgetPercent()));
+        if (!snap.alerts().isEmpty()) {
+            sb.append(". Alerts: ");
+            int shown = 0;
+            for (var a : snap.alerts()) {
+                if (shown > 0) sb.append(", ");
+                sb.append(a.ruleName()).append("(").append(a.severity()).append(")");
+                if (++shown >= 3) { sb.append("..."); break; }
+            }
+        }
+        if (!snap.timelineEvents().isEmpty()) {
+            sb.append(". Events: ").append(snap.timelineEvents().size());
+        }
+        return sb.toString();
     }
 
     private void jumpToNextBookmark() {
@@ -459,14 +478,15 @@ public final class SessionPlayerGame implements WorldApplication {
                 currentIndex = bm.frameIndex();
                 playing = false;
                 System.out.printf("-> Bookmark: frame %d [%s]%n", currentIndex + 1, bm.label());
+                if (!bm.note().isEmpty()) System.out.println("   Note: " + bm.note());
                 return;
             }
         }
-        // Wrap to first
         var first = bookmarks.getFirst();
         currentIndex = first.frameIndex();
         playing = false;
         System.out.printf("-> Bookmark: frame %d [%s]%n", currentIndex + 1, first.label());
+        if (!first.note().isEmpty()) System.out.println("   Note: " + first.note());
     }
 
     // --- Investigation windows ---
@@ -487,7 +507,7 @@ public final class SessionPlayerGame implements WorldApplication {
             end = Math.min(snapshots.size() - 1, currentIndex + 30);
         }
 
-        // Auto-generate name from frame state
+        // Auto-generate name and note from frame state
         var snap = snapshots.get(currentIndex);
         String name;
         if (!snap.alerts().isEmpty()) {
@@ -495,8 +515,9 @@ public final class SessionPlayerGame implements WorldApplication {
         } else {
             name = "window at T" + snap.tick();
         }
+        String note = generateAutoNote(snap);
 
-        metadata.addWindow(name, start, end);
+        metadata.addWindow(name, start, end, note);
         System.out.printf("Window saved: [%s] frames %d-%d (%d frames)%n",
             name, start + 1, end + 1, end - start + 1);
     }
@@ -508,6 +529,7 @@ public final class SessionPlayerGame implements WorldApplication {
         currentIndex = w.startFrame();
         playing = false;
         System.out.printf("-> Window [%s]: frames %d-%d%n", w.name(), w.startFrame() + 1, w.endFrame() + 1);
+        if (!w.note().isEmpty()) System.out.println("   Note: " + w.note());
     }
 
     private void jumpToPrevWindow() {
@@ -517,5 +539,6 @@ public final class SessionPlayerGame implements WorldApplication {
         currentIndex = w.startFrame();
         playing = false;
         System.out.printf("-> Window [%s]: frames %d-%d%n", w.name(), w.startFrame() + 1, w.endFrame() + 1);
+        if (!w.note().isEmpty()) System.out.println("   Note: " + w.note());
     }
 }
