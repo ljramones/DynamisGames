@@ -64,6 +64,8 @@ public final class SessionCompareGame implements WorldApplication {
     static final ActionId EXPORT_REPORT = new ActionId("exportReport");
     static final ActionId CYCLE_LEFT_WINDOW = new ActionId("cycleLeftWin");
     static final ActionId CYCLE_RIGHT_WINDOW = new ActionId("cycleRightWin");
+    static final ActionId NEXT_MATCH = new ActionId("nextMatch");
+    static final ActionId PREV_MATCH = new ActionId("prevMatch");
     static final ActionId QUIT = new ActionId("quit");
     private static final ContextId CTX = new ContextId("compare");
     private static final int KEY_SPACE = 32, KEY_COMMA = 44, KEY_PERIOD = 46;
@@ -71,7 +73,7 @@ public final class SessionCompareGame implements WorldApplication {
     private static final int KEY_1 = 49, KEY_2 = 50, KEY_3 = 51, KEY_TAB = 258;
     private static final int KEY_N = 78, KEY_B = 66;
     private static final int KEY_LEFT_BRACKET = 91, KEY_RIGHT_BRACKET = 93, KEY_R = 82, KEY_E = 69;
-    private static final int KEY_W = 87, KEY_Q = 81;
+    private static final int KEY_W = 87, KEY_Q = 81, KEY_Y = 89, KEY_U = 85;
 
     private final GlfwWindowSubsystem windowSub;
     private final InputWorldSubsystem inputSub;
@@ -106,7 +108,12 @@ public final class SessionCompareGame implements WorldApplication {
 
     // Window selection (-1 = full session, 0+ = window index)
     private int leftWindowIndex = -1;
-    private int rightWindowIndex = -1; // frames where score is a local peak above threshold
+    private int rightWindowIndex = -1;
+
+    // Auto-matched window pairs (by name)
+    private record WindowMatch(String name, int leftIndex, int rightIndex, float avgScore) {}
+    private java.util.List<WindowMatch> matchedWindows = java.util.List.of();
+    private int currentMatchIndex = -1; // frames where score is a local peak above threshold
 
     public SessionCompareGame(GlfwWindowSubsystem w, InputWorldSubsystem i, String left, String right) {
         this.windowSub = w;
@@ -135,6 +142,8 @@ public final class SessionCompareGame implements WorldApplication {
                     Map.entry(EXPORT_REPORT, List.of(new KeyBinding(KEY_E, 0))),
                     Map.entry(CYCLE_LEFT_WINDOW, List.of(new KeyBinding(KEY_W, 0))),
                     Map.entry(CYCLE_RIGHT_WINDOW, List.of(new KeyBinding(KEY_Q, 0))),
+                    Map.entry(NEXT_MATCH, List.of(new KeyBinding(KEY_Y, 0))),
+                    Map.entry(PREV_MATCH, List.of(new KeyBinding(KEY_U, 0))),
                     Map.entry(QUIT, List.of(new KeyBinding(KEY_ESC, 0)))),
                 Map.of(),
                 false);
@@ -154,6 +163,7 @@ public final class SessionCompareGame implements WorldApplication {
         rightMeta = loadMeta(rightFile);
 
         recalculateBounds();
+        buildWindowMatches();
 
         System.out.println("=== Debug Session Compare ===");
         System.out.printf("Left:  %s (%d frames)%n", leftFile, leftSnapshots.size());
@@ -174,7 +184,15 @@ public final class SessionCompareGame implements WorldApplication {
                     System.out.printf("    [%s] %d-%d%n", w.name(), w.startFrame() + 1, w.endFrame() + 1);
             }
         }
-        System.out.println("W=cycle left window  Q=cycle right  Space=play  N/B=anomaly  Esc=quit");
+        if (!matchedWindows.isEmpty()) {
+            System.out.println("\nMatched window pairs (Y/U to navigate):");
+            for (var m : matchedWindows) {
+                String band = m.avgScore >= 60 ? "SEVERE" : m.avgScore >= 30 ? "SIGNIFICANT" :
+                               m.avgScore >= 10 ? "MODERATE" : m.avgScore >= 1 ? "MINOR" : "NEUTRAL";
+                System.out.printf("  [%s] avg score: %.1f [%s]%n", m.name, m.avgScore, band);
+            }
+        }
+        System.out.println("W/Q=cycle windows  Y/U=matched pairs  Space=play  N/B=anomaly  Esc=quit");
     }
 
     @Override
@@ -201,6 +219,8 @@ public final class SessionCompareGame implements WorldApplication {
             if (frame.pressed(EXPORT_REPORT)) exportReport();
             if (frame.pressed(CYCLE_LEFT_WINDOW)) cycleWindow(true);
             if (frame.pressed(CYCLE_RIGHT_WINDOW)) cycleWindow(false);
+            if (frame.pressed(NEXT_MATCH)) jumpToNextMatch();
+            if (frame.pressed(PREV_MATCH)) jumpToPrevMatch();
         }
 
         // Process mouse events for timeline scrubbing
@@ -1043,5 +1063,65 @@ public final class SessionCompareGame implements WorldApplication {
             }
         } catch (IOException ignored) {}
         return null;
+    }
+
+    // --- Auto-matched windows ---
+
+    private void buildWindowMatches() {
+        if (leftMeta == null || rightMeta == null) { matchedWindows = java.util.List.of(); return; }
+
+        var matches = new java.util.ArrayList<WindowMatch>();
+        for (int li = 0; li < leftMeta.windows().size(); li++) {
+            var lw = leftMeta.windows().get(li);
+            for (int ri = 0; ri < rightMeta.windows().size(); ri++) {
+                var rw = rightMeta.windows().get(ri);
+                if (lw.name().equals(rw.name())) {
+                    // Compute average score for this matched window
+                    float avgScore = computeMatchedWindowScore(li, ri);
+                    matches.add(new WindowMatch(lw.name(), li, ri, avgScore));
+                    break;
+                }
+            }
+        }
+        // Sort worst first
+        matches.sort((a, b) -> Float.compare(b.avgScore, a.avgScore));
+        matchedWindows = matches;
+    }
+
+    private float computeMatchedWindowScore(int leftWinIdx, int rightWinIdx) {
+        var lw = leftMeta.windows().get(leftWinIdx);
+        var rw = rightMeta.windows().get(rightWinIdx);
+        int len = Math.min(lw.frameCount(), rw.frameCount());
+        if (len == 0) return 0;
+
+        float sum = 0;
+        for (int i = 0; i < len; i++) {
+            var left = getFrame(leftSnapshots, lw.startFrame() + i);
+            var right = getFrame(rightSnapshots, rw.startFrame() + i);
+            sum += computeScore(left, right);
+        }
+        return sum / len;
+    }
+
+    private void jumpToNextMatch() {
+        if (matchedWindows.isEmpty()) return;
+        currentMatchIndex = (currentMatchIndex + 1) % matchedWindows.size();
+        applyMatch(matchedWindows.get(currentMatchIndex));
+    }
+
+    private void jumpToPrevMatch() {
+        if (matchedWindows.isEmpty()) return;
+        currentMatchIndex = (currentMatchIndex - 1 + matchedWindows.size()) % matchedWindows.size();
+        applyMatch(matchedWindows.get(currentMatchIndex));
+    }
+
+    private void applyMatch(WindowMatch match) {
+        leftWindowIndex = match.leftIndex;
+        rightWindowIndex = match.rightIndex;
+        currentIndex = 0;
+        recalculateBounds();
+        String band = match.avgScore >= 60 ? "SEVERE" : match.avgScore >= 30 ? "SIGNIFICANT" :
+                       match.avgScore >= 10 ? "MODERATE" : match.avgScore >= 1 ? "MINOR" : "NEUTRAL";
+        System.out.printf("-> Match [%s]: avg score %.1f [%s]%n", match.name, match.avgScore, band);
     }
 }
