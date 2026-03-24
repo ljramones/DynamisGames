@@ -1,4 +1,4 @@
-package org.dynamisengine.games.debugwatchdog;
+package org.dynamisengine.games.proving;
 
 import org.lwjgl.opengl.GL;
 import org.lwjgl.stb.STBEasyFont;
@@ -18,7 +18,7 @@ import static org.lwjgl.system.MemoryUtil.*;
  * Since GL_QUADS is not available in core profile, we convert quads to
  * triangles via an index buffer (2 triangles per quad: 0,1,2 + 0,2,3).
  */
-public final class TextRenderer {
+public final class OpenGlTextRenderer {
 
     private static final String VERTEX_SHADER = """
             #version 410 core

@@ -1,5 +1,10 @@
 package org.dynamisengine.games.debughistory;
 
+import org.dynamisengine.games.proving.OpenGlDebugOverlayRenderer;
+import org.dynamisengine.games.proving.OpenGlTextRenderer;
+import org.dynamisengine.games.proving.ProvingInputSubsystem;
+import org.dynamisengine.games.proving.ProvingWindowSubsystem;
+
 import org.dynamisengine.debug.api.DebugCategory;
 import org.dynamisengine.debug.api.DebugSeverity;
 import org.dynamisengine.debug.api.DebugSnapshot;
@@ -66,9 +71,9 @@ public final class HistoryTimelineGame implements WorldApplication {
     private static final float SPIKE_DURATION = 2f;
     private static final float RECOVERY_DURATION = 4f;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final TextRenderer textRenderer = new TextRenderer();
+    private final ProvingWindowSubsystem windowSub;
+    private final ProvingInputSubsystem inputSub;
+    private final OpenGlTextRenderer textRenderer = new OpenGlTextRenderer();
     private OpenGlDebugOverlayRenderer overlayRenderer;
 
     // Debug spine
@@ -90,7 +95,7 @@ public final class HistoryTimelineGame implements WorldApplication {
     private float simPhysicsStepMs = 1.0f;
     private float simAudioVoices = 8f;
 
-    public HistoryTimelineGame(WindowSubsystem w, WindowInputSubsystem i) {
+    public HistoryTimelineGame(ProvingWindowSubsystem w, ProvingInputSubsystem i) {
         this.windowSub = w;
         this.inputSub = i;
     }

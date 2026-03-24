@@ -1,21 +1,27 @@
-package org.dynamisengine.games.debugcorrelation;
+package org.dynamisengine.games.proving;
 
+import org.dynamisengine.ui.debug.builder.DebugViewSnapshot;
 import org.dynamisengine.ui.debug.model.*;
 import org.dynamisengine.ui.debug.render.DebugOverlayRenderer;
 
 import java.util.List;
 
+import static org.lwjgl.opengl.GL11.GL_SCISSOR_TEST;
+import static org.lwjgl.opengl.GL11.glDisable;
+import static org.lwjgl.opengl.GL11.glEnable;
+import static org.lwjgl.opengl.GL11.glScissor;
+
 /**
  * Minimal OpenGL implementation of {@link DebugOverlayRenderer}.
  *
- * <p>Uses the proving module's {@link TextRenderer} for text and filled rects.
+ * <p>Uses the proving module's {@link OpenGlTextRenderer} for text and filled rects.
  * This is a Phase 1 renderer — layout is simple column-based positioning,
  * not a full layout engine.
  *
  * <p>Lives in the proving module because it depends on LWJGL. A production
  * renderer would live in DynamisLightEngine.
  */
-final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
+public final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
 
     // Layout constants
     private static final float PANEL_WIDTH = 280f;
@@ -43,10 +49,10 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
     private static final float[] FLAG_WARN    = {0.9f, 0.7f, 0.2f};
     private static final float[] FLAG_ERR     = {0.9f, 0.2f, 0.2f};
 
-    private final TextRenderer textRenderer;
+    private final OpenGlTextRenderer textRenderer;
     private int screenW, screenH;
 
-    OpenGlDebugOverlayRenderer(TextRenderer textRenderer) {
+    public OpenGlDebugOverlayRenderer(OpenGlTextRenderer textRenderer) {
         this.textRenderer = textRenderer;
     }
 
@@ -61,6 +67,7 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
         this.screenW = screenW;
         this.screenH = screenH;
 
+        org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_DEPTH_TEST);
         beginOverlay();
 
         float startX = 8f;
@@ -135,15 +142,20 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
                 1f, 0.8f, 0.2f, 1f, screenW, screenH);
         }
 
+        // Clip content to panel bounds (OpenGL scissor: Y is bottom-up)
+        glEnable(GL_SCISSOR_TEST);
+        glScissor((int) box.x(), screenH - (int)(box.y() + box.height()),
+            (int) box.width(), (int) box.height());
+
         float x = box.x() + PANEL_PADDING;
         float y = box.y() + (compact ? 4f : PANEL_PADDING);
 
         // Title
         if (compact) {
-            // Compact: title + "no data" on same line, dimmer
             textRenderer.drawText(panel.title() + " - no data", x, y, TEXT_SCALE,
                 TEXT_DIM[0], TEXT_DIM[1], TEXT_DIM[2], screenW, screenH);
-            return; // nothing more to draw
+            glDisable(GL_SCISSOR_TEST);
+            return;
         }
 
         float[] titleColor = panel.highlighted() ? TEXT_WARNING : TEXT_HEADER;
@@ -182,6 +194,8 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
                 y += trendHeight + 2;
             }
         }
+
+        glDisable(GL_SCISSOR_TEST);
     }
 
     @Override
@@ -260,8 +274,169 @@ final class OpenGlDebugOverlayRenderer implements DebugOverlayRenderer {
     }
 
     @Override
+    public void renderFocus(DebugOverlayPanel panel, LayoutBox screen,
+                             List<DebugViewSnapshot.DebugTimelineEvent> timelineEvents) {
+        this.screenW = (int) screen.width();
+        this.screenH = (int) screen.height();
+
+        // Disable depth test so 2D overlay renders on top of 3D scene
+        org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_DEPTH_TEST);
+
+        beginOverlay();
+
+        float margin = 12f;
+        float x = margin;
+        float y = margin;
+        float w = screen.width() - margin * 2;
+
+        // Full-screen background
+        float[] bg = switch (panel.severity()) {
+            case WARNING -> BG_WARNING;
+            case ERROR -> BG_ERROR;
+            default -> BG_NORMAL;
+        };
+        textRenderer.drawRect(0, 0, screen.width(), screen.height(),
+            bg[0], bg[1], bg[2], bg[3], screenW, screenH);
+
+        // Header: title + category + severity
+        float[] titleColor = panel.highlighted() ? TEXT_WARNING : TEXT_HEADER;
+        textRenderer.drawText("[ FOCUS ] " + panel.title(), x, y, 2.5f,
+            titleColor[0], titleColor[1], titleColor[2], screenW, screenH);
+        y += 22f;
+
+        String meta = String.format("id: %s/%s  severity: %s  region: %s",
+            panel.id().category(), panel.id().stableKey(),
+            panel.severity(), panel.region());
+        textRenderer.drawText(meta, x, y, TEXT_SCALE * 0.85f,
+            TEXT_DIM[0], TEXT_DIM[1], TEXT_DIM[2], screenW, screenH);
+        y += ROW_HEIGHT + 4;
+
+        // Separator
+        textRenderer.drawRect(x, y, w, 1f, 0.3f, 0.3f, 0.3f, 1f, screenW, screenH);
+        y += 6f;
+
+        // Full metrics (no truncation)
+        textRenderer.drawText("Metrics", x, y, HEADER_SCALE,
+            TEXT_HEADER[0], TEXT_HEADER[1], TEXT_HEADER[2], screenW, screenH);
+        y += ROW_HEIGHT + 2;
+
+        for (var row : panel.rows()) {
+            float[] color = switch (row.severity()) {
+                case WARNING -> TEXT_WARNING;
+                case ERROR -> TEXT_ERROR;
+                default -> TEXT_NORMAL;
+            };
+            // Full precision, no truncation
+            textRenderer.drawText("  " + row.label() + ": " + row.value(), x, y, TEXT_SCALE,
+                color[0], color[1], color[2], screenW, screenH);
+            y += ROW_HEIGHT;
+        }
+
+        // Flags
+        if (!panel.flags().isEmpty()) {
+            y += 4f;
+            textRenderer.drawText("Flags", x, y, HEADER_SCALE,
+                TEXT_HEADER[0], TEXT_HEADER[1], TEXT_HEADER[2], screenW, screenH);
+            y += ROW_HEIGHT + 2;
+
+            for (var flag : panel.flags()) {
+                float[] fc = switch (flag.state()) {
+                    case ACTIVE -> FLAG_ACTIVE;
+                    case WARNING -> FLAG_WARN;
+                    case ERROR -> FLAG_ERR;
+                    default -> FLAG_OK;
+                };
+                textRenderer.drawText("  [" + flag.state() + "] " + flag.name(), x, y, TEXT_SCALE,
+                    fc[0], fc[1], fc[2], screenW, screenH);
+                y += ROW_HEIGHT;
+            }
+        }
+
+        // Enlarged trends
+        if (!panel.trends().isEmpty()) {
+            y += 6f;
+            textRenderer.drawText("Trends", x, y, HEADER_SCALE,
+                TEXT_HEADER[0], TEXT_HEADER[1], TEXT_HEADER[2], screenW, screenH);
+            y += ROW_HEIGHT + 2;
+
+            float trendWidth = w * 0.8f;
+            float trendHeight = 40f; // enlarged
+            for (var trend : panel.trends()) {
+                textRenderer.drawText("  " + trend.metricName() +
+                    String.format("  [min=%.2f max=%.2f]", trend.min(), trend.max()),
+                    x, y, TEXT_SCALE * 0.85f, TEXT_DIM[0], TEXT_DIM[1], TEXT_DIM[2], screenW, screenH);
+                y += ROW_HEIGHT;
+                var trendBox = new LayoutBox(x + 8, y, trendWidth, trendHeight);
+                drawTrend(trend, trendBox);
+                drawTrendAnnotations(trendBox, timelineEvents);
+                y += trendHeight + 6;
+            }
+        }
+
+        // Recent events for this category
+        y += 6f;
+        textRenderer.drawRect(x, y, w, 1f, 0.3f, 0.3f, 0.3f, 1f, screenW, screenH);
+        y += 6f;
+        textRenderer.drawText("Recent Events (" + timelineEvents.size() + ")", x, y, HEADER_SCALE,
+            TEXT_HEADER[0], TEXT_HEADER[1], TEXT_HEADER[2], screenW, screenH);
+        y += ROW_HEIGHT + 2;
+
+        if (timelineEvents.isEmpty()) {
+            textRenderer.drawText("  (no events for this category)", x, y, TEXT_SCALE,
+                TEXT_DIM[0], TEXT_DIM[1], TEXT_DIM[2], screenW, screenH);
+        } else {
+            int shown = 0;
+            for (int i = timelineEvents.size() - 1; i >= 0 && shown < 15; i--) {
+                var event = timelineEvents.get(i);
+                float[] ec = "ERROR".equals(event.severity()) || "CRITICAL".equals(event.severity())
+                    ? TEXT_ERROR : TEXT_WARNING;
+                String line = String.format("  T%d [%s] %s: %s",
+                    event.frameNumber(), event.severity(), event.source(), event.message());
+                textRenderer.drawText(line, x, y, TEXT_SCALE * 0.85f,
+                    ec[0], ec[1], ec[2], screenW, screenH);
+                y += ROW_HEIGHT;
+                shown++;
+            }
+        }
+
+        // Navigation hint
+        textRenderer.drawText("F=exit focus  [/]=cycle panels", x,
+            screen.height() - 20, TEXT_SCALE * 0.85f,
+            TEXT_DIM[0], TEXT_DIM[1], TEXT_DIM[2], screenW, screenH);
+
+        endOverlay();
+    }
+
+    @Override
     public void endOverlay() {
         textRenderer.endFrame();
+    }
+
+    /** Draw event markers on a trend graph in focus mode. */
+    private void drawTrendAnnotations(LayoutBox box,
+                                       java.util.List<DebugViewSnapshot.DebugTimelineEvent> events) {
+        if (events.isEmpty()) return;
+
+        long minFrame = Long.MAX_VALUE, maxFrame = Long.MIN_VALUE;
+        for (var e : events) {
+            if (e.frameNumber() < minFrame) minFrame = e.frameNumber();
+            if (e.frameNumber() > maxFrame) maxFrame = e.frameNumber();
+        }
+        long frameRange = Math.max(1, maxFrame - minFrame);
+
+        for (var event : events) {
+            float t = (float)(event.frameNumber() - minFrame) / frameRange;
+            float ex = box.x() + t * box.width();
+
+            boolean severe = "ERROR".equals(event.severity()) || "CRITICAL".equals(event.severity());
+            float r = severe ? 1f : 1f;
+            float g = severe ? 0.2f : 0.8f;
+            float b = severe ? 0.2f : 0.2f;
+            float a = severe ? 0.7f : 0.5f;
+            float tickH = severe ? box.height() : box.height() * 0.6f;
+
+            textRenderer.drawRect(ex, box.y(), 1.5f, tickH, r, g, b, a, screenW, screenH);
+        }
     }
 
     private boolean isEmpty(DebugOverlayPanel panel) {

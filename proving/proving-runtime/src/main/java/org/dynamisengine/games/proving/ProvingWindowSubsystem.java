@@ -1,4 +1,4 @@
-package org.dynamisengine.games.debugwatchdog;
+package org.dynamisengine.games.proving;
 
 import org.dynamisengine.window.api.*;
 import org.dynamisengine.window.glfw.GlfwWindowSystem;
@@ -12,7 +12,7 @@ import org.dynamisengine.worldengine.runtime.subsystem.WorldSubsystem;
 import java.util.Optional;
 import java.util.Set;
 
-public final class WindowSubsystem implements WorldSubsystem {
+public final class ProvingWindowSubsystem implements WorldSubsystem {
 
     private GlfwWindowSystem windowSystem;
     private Window window;
@@ -24,7 +24,7 @@ public final class WindowSubsystem implements WorldSubsystem {
     private final int width;
     private final int height;
 
-    public WindowSubsystem(String title, int width, int height) {
+    public ProvingWindowSubsystem(String title, int width, int height) {
         this.title = title;
         this.width = width;
         this.height = height;

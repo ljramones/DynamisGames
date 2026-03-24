@@ -1,5 +1,10 @@
 package org.dynamisengine.games.debugqueries;
 
+import org.dynamisengine.games.proving.OpenGlDebugOverlayRenderer;
+import org.dynamisengine.games.proving.OpenGlTextRenderer;
+import org.dynamisengine.games.proving.ProvingInputSubsystem;
+import org.dynamisengine.games.proving.ProvingWindowSubsystem;
+
 import org.dynamisengine.debug.api.DebugCategory;
 import org.dynamisengine.debug.api.DebugSeverity;
 import org.dynamisengine.debug.api.DebugSnapshot;
@@ -72,9 +77,9 @@ public final class SessionQueriesGame implements WorldApplication {
 
     private static final DebugOverlayPanelId QUERY_PANEL_ID = new DebugOverlayPanelId("query", "results");
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final TextRenderer textRenderer = new TextRenderer();
+    private final ProvingWindowSubsystem windowSub;
+    private final ProvingInputSubsystem inputSub;
+    private final OpenGlTextRenderer textRenderer = new OpenGlTextRenderer();
     private OpenGlDebugOverlayRenderer overlayRenderer;
 
     private DebugSession session;
@@ -94,7 +99,7 @@ public final class SessionQueriesGame implements WorldApplication {
     private float simPhysicsStepMs = 1.0f;
     private int spikeTimer = 0;
 
-    public SessionQueriesGame(WindowSubsystem w, WindowInputSubsystem i) {
+    public SessionQueriesGame(ProvingWindowSubsystem w, ProvingInputSubsystem i) {
         this.windowSub = w;
         this.inputSub = i;
     }

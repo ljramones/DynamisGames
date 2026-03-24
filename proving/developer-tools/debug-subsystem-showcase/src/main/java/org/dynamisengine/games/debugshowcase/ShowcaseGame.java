@@ -28,6 +28,10 @@ import org.dynamisengine.ui.debug.export.JsonFileExporter;
 import org.dynamisengine.ui.debug.export.TcpExporter;
 import org.dynamisengine.ui.debug.runtime.DebugOverlayOptions;
 import org.dynamisengine.ui.debug.runtime.DebugOverlayState;
+import org.dynamisengine.games.proving.OpenGlDebugOverlayRenderer;
+import org.dynamisengine.games.proving.OpenGlTextRenderer;
+import org.dynamisengine.games.proving.ProvingInputSubsystem;
+import org.dynamisengine.games.proving.ProvingWindowSubsystem;
 import org.dynamisengine.worldengine.api.GameContext;
 import org.dynamisengine.worldengine.api.WorldApplication;
 
@@ -85,11 +89,11 @@ public final class ShowcaseGame implements WorldApplication {
     private static final DebugOverlayPanelId QUERY_PANEL_ID = new DebugOverlayPanelId("query", "results");
     private static final float PHASE_DURATION = 5f;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
+    private final ProvingWindowSubsystem windowSub;
+    private final ProvingInputSubsystem inputSub;
 
     // Renderers
-    private final TextRenderer textRenderer = new TextRenderer();
+    private final OpenGlTextRenderer textRenderer = new OpenGlTextRenderer();
     private OpenGlDebugOverlayRenderer overlayRenderer;
     private DebugDrawRenderer debugDrawRenderer;
 
@@ -123,7 +127,7 @@ public final class ShowcaseGame implements WorldApplication {
     private float simAudioDspBudget = 20f;
     private float simGpuDrawCalls = 50f;
 
-    public ShowcaseGame(WindowSubsystem w, WindowInputSubsystem i) {
+    public ShowcaseGame(ProvingWindowSubsystem w, ProvingInputSubsystem i) {
         this.windowSub = w;
         this.inputSub = i;
     }

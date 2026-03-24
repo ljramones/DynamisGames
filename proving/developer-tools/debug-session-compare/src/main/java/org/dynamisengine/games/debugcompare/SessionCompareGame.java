@@ -1,5 +1,10 @@
 package org.dynamisengine.games.debugcompare;
 
+import org.dynamisengine.games.proving.OpenGlDebugOverlayRenderer;
+import org.dynamisengine.games.proving.OpenGlTextRenderer;
+import org.dynamisengine.games.proving.ProvingInputSubsystem;
+import org.dynamisengine.games.proving.ProvingWindowSubsystem;
+
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.window.api.InputEvent;
@@ -64,11 +69,11 @@ public final class SessionCompareGame implements WorldApplication {
     private static final int KEY_N = 78, KEY_B = 66;
     private static final int KEY_LEFT_BRACKET = 91, KEY_RIGHT_BRACKET = 93, KEY_R = 82, KEY_E = 69;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
+    private final ProvingWindowSubsystem windowSub;
+    private final ProvingInputSubsystem inputSub;
     private final String leftFile, rightFile;
 
-    private final TextRenderer textRenderer = new TextRenderer();
+    private final OpenGlTextRenderer textRenderer = new OpenGlTextRenderer();
     private OpenGlDebugOverlayRenderer overlayRenderer;
     private final DebugOverlayBuilder builder = new DebugOverlayBuilder(
         new DebugOverlayOptions(false, true, true, 60, 14, 6, false));
@@ -95,7 +100,7 @@ public final class SessionCompareGame implements WorldApplication {
     private int rangeStart = -1;
     private int rangeEnd = -1; // frames where score is a local peak above threshold
 
-    public SessionCompareGame(WindowSubsystem w, WindowInputSubsystem i, String left, String right) {
+    public SessionCompareGame(ProvingWindowSubsystem w, ProvingInputSubsystem i, String left, String right) {
         this.windowSub = w;
         this.inputSub = i;
         this.leftFile = left;

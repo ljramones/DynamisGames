@@ -1,4 +1,4 @@
-package org.dynamisengine.games.debugcompare;
+package org.dynamisengine.games.proving;
 
 import org.dynamisengine.input.core.DefaultInputProcessor;
 import org.dynamisengine.input.core.InputDeviceManager;
@@ -16,16 +16,16 @@ import org.dynamisengine.input.api.frame.InputFrame;
 import java.util.Optional;
 import java.util.Set;
 
-public final class WindowInputSubsystem implements WorldSubsystem {
+public final class ProvingInputSubsystem implements WorldSubsystem {
 
-    private final WindowSubsystem windowSubsystem;
+    private final ProvingWindowSubsystem windowSubsystem;
     private final DefaultInputProcessor processor;
     private final InputDeviceManager deviceManager;
     private volatile boolean initialized = false;
     private volatile long lastTick = -1;
     private volatile InputFrame lastFrame;
 
-    public WindowInputSubsystem(WindowSubsystem windowSubsystem,
+    public ProvingInputSubsystem(ProvingWindowSubsystem windowSubsystem,
                                  DefaultInputProcessor processor) {
         this.windowSubsystem = windowSubsystem;
         this.processor = processor;

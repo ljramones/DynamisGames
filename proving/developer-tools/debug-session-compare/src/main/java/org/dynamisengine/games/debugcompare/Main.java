@@ -1,5 +1,10 @@
 package org.dynamisengine.games.debugcompare;
 
+import org.dynamisengine.games.proving.OpenGlDebugOverlayRenderer;
+import org.dynamisengine.games.proving.OpenGlTextRenderer;
+import org.dynamisengine.games.proving.ProvingInputSubsystem;
+import org.dynamisengine.games.proving.ProvingWindowSubsystem;
+
 import org.dynamisengine.worldengine.api.WorldEngine;
 
 public final class Main {
@@ -9,9 +14,9 @@ public final class Main {
             System.exit(1);
         }
 
-        var windowSub = new WindowSubsystem("Dynamis - Session Compare", 1400, 800);
+        var windowSub = new ProvingWindowSubsystem("Dynamis - Session Compare", 1400, 800);
         var processor = SessionCompareGame.createProcessor();
-        var inputSub = new WindowInputSubsystem(windowSub, processor);
+        var inputSub = new ProvingInputSubsystem(windowSub, processor);
 
         WorldEngine.builder()
                 .application(new SessionCompareGame(windowSub, inputSub, args[0], args[1]))

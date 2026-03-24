@@ -15,6 +15,11 @@
   <description>Proves history accumulation, timeline events, trend evolution, and alert transitions under changing conditions.</description>
 
   <dependencies>
+    <dependency>
+      <groupId>org.dynamisengine.games</groupId>
+      <artifactId>proving-runtime</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
     <!-- WorldEngine runtime -->
     <dependency>
       <groupId>org.dynamisengine.worldengine</groupId>

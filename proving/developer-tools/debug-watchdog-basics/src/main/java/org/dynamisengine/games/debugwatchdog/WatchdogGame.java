@@ -1,5 +1,10 @@
 package org.dynamisengine.games.debugwatchdog;
 
+import org.dynamisengine.games.proving.OpenGlDebugOverlayRenderer;
+import org.dynamisengine.games.proving.OpenGlTextRenderer;
+import org.dynamisengine.games.proving.ProvingInputSubsystem;
+import org.dynamisengine.games.proving.ProvingWindowSubsystem;
+
 import org.dynamisengine.debug.api.DebugCategory;
 import org.dynamisengine.debug.api.DebugSeverity;
 import org.dynamisengine.debug.api.DebugSnapshot;
@@ -66,9 +71,9 @@ public final class WatchdogGame implements WorldApplication {
     private static final int KEY_TAB = 258, KEY_1 = 49, KEY_2 = 50, KEY_3 = 51, KEY_4 = 52;
     private static final int KEY_R = 82, KEY_P = 80, KEY_ESC = 256;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final TextRenderer textRenderer = new TextRenderer();
+    private final ProvingWindowSubsystem windowSub;
+    private final ProvingInputSubsystem inputSub;
+    private final OpenGlTextRenderer textRenderer = new OpenGlTextRenderer();
     private OpenGlDebugOverlayRenderer overlayRenderer;
 
     private DebugSession session;
@@ -85,7 +90,7 @@ public final class WatchdogGame implements WorldApplication {
     // The single metric under test
     private float testMetric = 5.0f;
 
-    public WatchdogGame(WindowSubsystem w, WindowInputSubsystem i) {
+    public WatchdogGame(ProvingWindowSubsystem w, ProvingInputSubsystem i) {
         this.windowSub = w;
         this.inputSub = i;
     }
