@@ -247,7 +247,15 @@ public final class SessionCompareGame implements WorldApplication {
 
     // --- Diff rendering ---
 
-    private static final float DELTA_THRESHOLD = 0.5f; // ignore deltas below this
+    private static final float DELTA_THRESHOLD = 0.5f;
+
+    // Regression score weights
+    private static final float W_FRAME_TIME = 3f;    // per ms delta
+    private static final float W_BUDGET = 0.5f;      // per % delta
+    private static final float W_ALERT_COUNT = 5f;    // per alert delta
+    private static final float W_NEW_ERROR = 15f;     // per new ERROR/CRITICAL alert
+    private static final float W_NEW_WARNING = 8f;    // per new WARNING alert
+    private static final float W_METRIC = 1f;         // per unit of subsystem metric delta
 
     private void renderDiffSummary(DebugViewSnapshot left, DebugViewSnapshot right,
                                     int centerX, int w, int h) {
@@ -256,102 +264,154 @@ public final class SessionCompareGame implements WorldApplication {
         float scale = 1.5f;
         float lineH = 12f;
 
-        // Summary delta
-        float leftFt = left.summary().frameTimeMs();
-        float rightFt = right.summary().frameTimeMs();
-        float ftDelta = rightFt - leftFt;
-        if (Math.abs(ftDelta) > DELTA_THRESHOLD) {
-            String sign = ftDelta > 0 ? "+" : "";
-            float r = ftDelta > 0 ? 1f : 0.3f;
-            float g = ftDelta > 0 ? 0.3f : 1f;
-            textRenderer.drawText(String.format("frame: %s%.1fms", sign, ftDelta),
-                x, y, scale, r, g, 0.3f, w, h);
-            y += lineH;
+        // --- Compute regression score ---
+        float score = 0f;
+        var contributors = new java.util.ArrayList<ScoreContributor>();
+
+        // Frame time
+        float ftDelta = right.summary().frameTimeMs() - left.summary().frameTimeMs();
+        if (ftDelta > DELTA_THRESHOLD) {
+            float contrib = ftDelta * W_FRAME_TIME;
+            score += contrib;
+            contributors.add(new ScoreContributor("frameTimeMs", contrib, ftDelta));
         }
 
-        float leftBudget = left.summary().budgetPercent();
-        float rightBudget = right.summary().budgetPercent();
-        float budgetDelta = rightBudget - leftBudget;
-        if (Math.abs(budgetDelta) > 1f) {
-            String sign = budgetDelta > 0 ? "+" : "";
-            float r = budgetDelta > 0 ? 1f : 0.3f;
-            float g = budgetDelta > 0 ? 0.3f : 1f;
-            textRenderer.drawText(String.format("budget: %s%.0f%%", sign, budgetDelta),
-                x, y, scale, r, g, 0.3f, w, h);
-            y += lineH;
+        // Budget
+        float budgetDelta = right.summary().budgetPercent() - left.summary().budgetPercent();
+        if (budgetDelta > 1f) {
+            float contrib = budgetDelta * W_BUDGET;
+            score += contrib;
+            contributors.add(new ScoreContributor("budget%", contrib, budgetDelta));
         }
 
-        // Alert count delta
-        int leftAlerts = left.alerts().size();
-        int rightAlerts = right.alerts().size();
-        int alertDelta = rightAlerts - leftAlerts;
-        if (alertDelta != 0) {
-            String sign = alertDelta > 0 ? "+" : "";
-            float r = alertDelta > 0 ? 1f : 0.3f;
-            float g = alertDelta > 0 ? 0.3f : 1f;
-            textRenderer.drawText(String.format("alerts: %s%d", sign, alertDelta),
-                x, y, scale, r, g, 0.3f, w, h);
-            y += lineH;
+        // Alert count
+        int alertDelta = right.alerts().size() - left.alerts().size();
+        if (alertDelta > 0) {
+            float contrib = alertDelta * W_ALERT_COUNT;
+            score += contrib;
+            contributors.add(new ScoreContributor("alerts", contrib, alertDelta));
         }
 
-        // Per-category metric deltas
+        // New alerts by severity
+        int newErrors = 0, newWarnings = 0;
+        for (var ra : right.alerts()) {
+            boolean isNew = left.alerts().stream().noneMatch(a -> a.ruleName().equals(ra.ruleName()));
+            if (isNew) {
+                if ("ERROR".equals(ra.severity())) newErrors++;
+                else newWarnings++;
+            }
+        }
+        if (newErrors > 0) {
+            float contrib = newErrors * W_NEW_ERROR;
+            score += contrib;
+            contributors.add(new ScoreContributor("new ERRORs", contrib, newErrors));
+        }
+        if (newWarnings > 0) {
+            float contrib = newWarnings * W_NEW_WARNING;
+            score += contrib;
+            contributors.add(new ScoreContributor("new WARNINGs", contrib, newWarnings));
+        }
+
+        // Subsystem metric deltas
         for (var catKey : left.categories().keySet()) {
             var leftCat = left.categories().get(catKey);
             var rightCat = right.categories().get(catKey);
             if (rightCat == null) continue;
-
             for (var srcEntry : leftCat.sources().entrySet()) {
                 var rightSrc = rightCat.sources().get(srcEntry.getKey());
                 if (rightSrc == null) continue;
-
                 for (var metricEntry : srcEntry.getValue().entrySet()) {
                     String rightVal = rightSrc.get(metricEntry.getKey());
                     if (rightVal == null) continue;
-
                     try {
                         double lv = Double.parseDouble(metricEntry.getValue());
                         double rv = Double.parseDouble(rightVal);
                         double delta = rv - lv;
-                        if (Math.abs(delta) > DELTA_THRESHOLD) {
-                            String sign = delta > 0 ? "+" : "";
-                            // For most metrics, higher = worse (red)
-                            float r = delta > 0 ? 0.9f : 0.3f;
-                            float g = delta > 0 ? 0.4f : 0.9f;
+                        if (delta > DELTA_THRESHOLD) {
+                            float contrib = (float)(delta * W_METRIC);
+                            score += contrib;
                             String name = metricEntry.getKey();
-                            if (name.length() > 12) name = name.substring(0, 12);
-                            textRenderer.drawText(String.format("%s: %s%.1f", name, sign, delta),
-                                x, y, scale * 0.85f, r, g, 0.3f, w, h);
-                            y += lineH;
-                            if (y > h - 80) return; // stop if running out of space
+                            if (name.length() > 15) name = name.substring(0, 15);
+                            contributors.add(new ScoreContributor(name, contrib, delta));
                         }
                     } catch (NumberFormatException ignored) {}
                 }
             }
         }
 
-        // New alerts in right (regression indicators)
-        for (var rightAlert : right.alerts()) {
-            boolean isNew = left.alerts().stream()
-                .noneMatch(a -> a.ruleName().equals(rightAlert.ruleName()));
-            if (isNew) {
-                textRenderer.drawText("NEW: " + rightAlert.ruleName(),
-                    x, y, scale * 0.85f, 1f, 0.2f, 0.2f, w, h);
-                y += lineH;
-                if (y > h - 80) return;
+        // Negative score = improvement
+        int resolvedCount = 0;
+        for (var la : left.alerts()) {
+            if (right.alerts().stream().noneMatch(a -> a.ruleName().equals(la.ruleName()))) {
+                resolvedCount++;
             }
         }
 
-        // Resolved alerts (improvement indicators)
-        for (var leftAlert : left.alerts()) {
-            boolean resolved = right.alerts().stream()
-                .noneMatch(a -> a.ruleName().equals(leftAlert.ruleName()));
-            if (resolved) {
-                textRenderer.drawText("RESOLVED: " + leftAlert.ruleName(),
-                    x, y, scale * 0.85f, 0.2f, 1f, 0.3f, w, h);
+        // Sort contributors by contribution (descending)
+        contributors.sort((a, b) -> Float.compare(b.contribution, a.contribution));
+
+        // --- Render score ---
+        int scoreInt = Math.round(score);
+        float sr, sg;
+        String verdict;
+        if (scoreInt == 0) { sr = 0.7f; sg = 0.7f; verdict = "NEUTRAL"; }
+        else if (scoreInt < 10) { sr = 0.9f; sg = 0.7f; verdict = "MINOR"; }
+        else if (scoreInt < 30) { sr = 1f; sg = 0.5f; verdict = "MODERATE"; }
+        else if (scoreInt < 60) { sr = 1f; sg = 0.3f; verdict = "SIGNIFICANT"; }
+        else { sr = 1f; sg = 0.15f; verdict = "SEVERE"; }
+
+        // Score background
+        textRenderer.drawRect(x - 4, y - 2, 120, 18, 0.1f, 0.1f, 0.1f, 0.85f, w, h);
+        textRenderer.drawText(String.format("SCORE: %d [%s]", scoreInt, verdict),
+            x, y, 1.8f, sr, sg, 0.2f, w, h);
+        y += 18;
+
+        if (resolvedCount > 0) {
+            textRenderer.drawText(resolvedCount + " alerts resolved",
+                x, y, scale * 0.85f, 0.2f, 1f, 0.3f, w, h);
+            y += lineH;
+        }
+
+        y += 4; // gap before contributors
+
+        // --- Render top contributors ---
+        int shown = 0;
+        for (var c : contributors) {
+            if (shown >= 8 || y > h - 80) break;
+            String sign = c.delta > 0 ? "+" : "";
+            textRenderer.drawText(String.format("%.0f  %s %s%.1f",
+                c.contribution, c.name, sign, c.delta),
+                x, y, scale * 0.8f, sr * 0.8f, sg * 0.8f, 0.3f, w, h);
+            y += lineH;
+            shown++;
+        }
+
+        // --- Render NEW / RESOLVED ---
+        y += 4;
+        for (var ra : right.alerts()) {
+            if (y > h - 80) break;
+            boolean isNew = left.alerts().stream().noneMatch(a -> a.ruleName().equals(ra.ruleName()));
+            if (isNew) {
+                textRenderer.drawText("NEW: " + truncate(ra.ruleName(), 20),
+                    x, y, scale * 0.85f, 1f, 0.2f, 0.2f, w, h);
                 y += lineH;
-                if (y > h - 80) return;
             }
         }
+        for (var la : left.alerts()) {
+            if (y > h - 80) break;
+            boolean resolved = right.alerts().stream().noneMatch(a -> a.ruleName().equals(la.ruleName()));
+            if (resolved) {
+                textRenderer.drawText("OK: " + truncate(la.ruleName(), 20),
+                    x, y, scale * 0.85f, 0.2f, 1f, 0.3f, w, h);
+                y += lineH;
+            }
+        }
+    }
+
+    private record ScoreContributor(String name, float contribution, double delta) {}
+
+    private static String truncate(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max - 2) + "..";
     }
 
     private static DebugSessionMetadata loadMeta(String ndjsonFile) {
