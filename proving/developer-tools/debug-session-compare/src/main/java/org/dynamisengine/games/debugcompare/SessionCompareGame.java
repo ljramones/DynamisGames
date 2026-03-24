@@ -51,12 +51,16 @@ public final class SessionCompareGame implements WorldApplication {
     static final ActionId SWITCH_SIDE = new ActionId("switchSide");
     static final ActionId NEXT_ANOMALY = new ActionId("nextAnomaly");
     static final ActionId PREV_ANOMALY = new ActionId("prevAnomaly");
+    static final ActionId RANGE_START = new ActionId("rangeStart");
+    static final ActionId RANGE_END = new ActionId("rangeEnd");
+    static final ActionId RANGE_CLEAR = new ActionId("rangeClear");
     static final ActionId QUIT = new ActionId("quit");
     private static final ContextId CTX = new ContextId("compare");
     private static final int KEY_SPACE = 32, KEY_COMMA = 44, KEY_PERIOD = 46;
     private static final int KEY_HOME = 268, KEY_END = 269, KEY_ESC = 256;
     private static final int KEY_1 = 49, KEY_2 = 50, KEY_3 = 51, KEY_TAB = 258;
     private static final int KEY_N = 78, KEY_B = 66;
+    private static final int KEY_LEFT_BRACKET = 91, KEY_RIGHT_BRACKET = 93, KEY_R = 82;
 
     private final WindowSubsystem windowSub;
     private final WindowInputSubsystem inputSub;
@@ -78,7 +82,11 @@ public final class SessionCompareGame implements WorldApplication {
 
     // Precomputed anomaly data
     private float[] perFrameScores;
-    private int[] anomalyPeakIndices; // frames where score is a local peak above threshold
+    private int[] anomalyPeakIndices;
+
+    // Range selection
+    private int rangeStart = -1;
+    private int rangeEnd = -1; // frames where score is a local peak above threshold
 
     public SessionCompareGame(WindowSubsystem w, WindowInputSubsystem i, String left, String right) {
         this.windowSub = w;
@@ -101,6 +109,9 @@ public final class SessionCompareGame implements WorldApplication {
                     Map.entry(SWITCH_SIDE, List.of(new KeyBinding(KEY_TAB, 0))),
                     Map.entry(NEXT_ANOMALY, List.of(new KeyBinding(KEY_N, 0))),
                     Map.entry(PREV_ANOMALY, List.of(new KeyBinding(KEY_B, 0))),
+                    Map.entry(RANGE_START, List.of(new KeyBinding(KEY_LEFT_BRACKET, 0))),
+                    Map.entry(RANGE_END, List.of(new KeyBinding(KEY_RIGHT_BRACKET, 0))),
+                    Map.entry(RANGE_CLEAR, List.of(new KeyBinding(KEY_R, 0))),
                     Map.entry(QUIT, List.of(new KeyBinding(KEY_ESC, 0)))),
                 Map.of(),
                 false);
@@ -151,6 +162,9 @@ public final class SessionCompareGame implements WorldApplication {
             if (frame.pressed(SWITCH_SIDE)) activeSideLeft = !activeSideLeft;
             if (frame.pressed(NEXT_ANOMALY)) jumpToNextAnomaly();
             if (frame.pressed(PREV_ANOMALY)) jumpToPrevAnomaly();
+            if (frame.pressed(RANGE_START)) { rangeStart = currentIndex; System.out.println("Range start: " + (rangeStart + 1)); }
+            if (frame.pressed(RANGE_END)) { rangeEnd = currentIndex; System.out.println("Range end: " + (rangeEnd + 1)); }
+            if (frame.pressed(RANGE_CLEAR)) { rangeStart = rangeEnd = -1; System.out.println("Range cleared"); }
         }
 
         // Auto-advance
@@ -246,18 +260,38 @@ public final class SessionCompareGame implements WorldApplication {
                 textRenderer.drawRect(px, barY - 4, 2, 14, r, g, 0.1f, 0.9f, w, h);
             }
         }
+        // Range selection shading
+        if (rangeStart >= 0 && rangeEnd >= 0 && maxIndex > 0) {
+            int rA = Math.min(rangeStart, rangeEnd);
+            int rB = Math.max(rangeStart, rangeEnd);
+            float rx = 10 + barW * ((float) rA / maxIndex);
+            float rw = barW * ((float)(rB - rA) / maxIndex);
+            textRenderer.drawRect(rx, barY - 5, rw, 16, 0.2f, 0.5f, 1f, 0.35f, w, h);
+            // A/B markers
+            textRenderer.drawRect(rx, barY - 6, 2, 18, 0.3f, 0.7f, 1f, 0.9f, w, h);
+            textRenderer.drawRect(rx + rw, barY - 6, 2, 18, 0.3f, 0.7f, 1f, 0.9f, w, h);
+        }
+
         if (maxIndex > 0) {
             float progress = (float) currentIndex / maxIndex;
             textRenderer.drawRect(10, barY, barW * progress, 6, 0.3f, 1f, 0.5f, 0.9f, w, h);
         }
 
+        // Range aggregation panel (below divider diff, above progress bar)
+        if (rangeStart >= 0 && rangeEnd >= 0) {
+            renderRangeAggregation(halfW, w, h);
+        }
+
         // Status
         String playState = playing ? "PLAYING " + playbackSpeed + "x" : "PAUSED";
-        textRenderer.drawText(String.format("[%s]  Frame %d/%d  Left tick: %d  Right tick: %d",
-            playState, currentIndex + 1, maxIndex + 1, leftSnap.tick(), rightSnap.tick()),
+        String rangeInfo = (rangeStart >= 0 && rangeEnd >= 0)
+            ? String.format("  Range: %d-%d", Math.min(rangeStart, rangeEnd) + 1, Math.max(rangeStart, rangeEnd) + 1)
+            : "";
+        textRenderer.drawText(String.format("[%s]  Frame %d/%d  L:%d  R:%d%s",
+            playState, currentIndex + 1, maxIndex + 1, leftSnap.tick(), rightSnap.tick(), rangeInfo),
             10, h - 42, 1.8f, 0.8f, 0.8f, 0.4f, w, h);
         textRenderer.drawText(
-            "Space=play  ,/.=step  Tab=switch  Home/End=jump  1/2/3=speed  Esc=quit",
+            "Space=play  ,/.=step  N/B=anomaly  [/]=range  R=clear  Esc=quit",
             10, h - 20, 1.5f, 0.4f, 0.4f, 0.5f, w, h);
 
         textRenderer.endFrame();
@@ -450,6 +484,112 @@ public final class SessionCompareGame implements WorldApplication {
     }
 
     private record ScoreContributor(String name, float contribution, double delta) {}
+
+    // --- Range aggregation ---
+
+    private void renderRangeAggregation(int centerX, int w, int h) {
+        int rA = Math.min(rangeStart, rangeEnd);
+        int rB = Math.max(rangeStart, rangeEnd);
+        int count = rB - rA + 1;
+        if (count < 2) return;
+
+        // Compute aggregates over range
+        double sumFtDelta = 0, sumBudgetDelta = 0, sumScore = 0;
+        int sumAlertDelta = 0, newErrors = 0, newWarnings = 0;
+        double maxFtDelta = 0;
+        var metricSums = new java.util.LinkedHashMap<String, Double>();
+
+        for (int i = rA; i <= rB; i++) {
+            var left = getFrame(leftSnapshots, i);
+            var right = getFrame(rightSnapshots, i);
+
+            double ftD = right.summary().frameTimeMs() - left.summary().frameTimeMs();
+            sumFtDelta += ftD;
+            if (ftD > maxFtDelta) maxFtDelta = ftD;
+
+            sumBudgetDelta += right.summary().budgetPercent() - left.summary().budgetPercent();
+            sumAlertDelta += right.alerts().size() - left.alerts().size();
+            if (i < perFrameScores.length) sumScore += perFrameScores[i];
+
+            for (var ra : right.alerts()) {
+                if (left.alerts().stream().noneMatch(a -> a.ruleName().equals(ra.ruleName()))) {
+                    if ("ERROR".equals(ra.severity())) newErrors++;
+                    else newWarnings++;
+                }
+            }
+
+            // Per-metric deltas
+            for (var catKey : left.categories().keySet()) {
+                var lc = left.categories().get(catKey);
+                var rc = right.categories().get(catKey);
+                if (rc == null) continue;
+                for (var se : lc.sources().entrySet()) {
+                    var rs = rc.sources().get(se.getKey());
+                    if (rs == null) continue;
+                    for (var me : se.getValue().entrySet()) {
+                        String rv = rs.get(me.getKey());
+                        if (rv == null) continue;
+                        try {
+                            double d = Double.parseDouble(rv) - Double.parseDouble(me.getValue());
+                            metricSums.merge(me.getKey(), d, Double::sum);
+                        } catch (NumberFormatException ignored) {}
+                    }
+                }
+            }
+        }
+
+        // Render
+        float x = centerX - 140; // left of center divider
+        float y = h * 0.55f;     // below the diff summary
+        float scale = 1.4f;
+        float lineH = 11f;
+
+        textRenderer.drawRect(x - 4, y - 4, 280, 130, 0.08f, 0.08f, 0.12f, 0.9f, w, h);
+        textRenderer.drawText(String.format("RANGE [%d-%d]  %d frames  %.1fs",
+            rA + 1, rB + 1, count, count / 60f), x, y, 1.6f, 0.3f, 0.8f, 1f, w, h);
+        y += 16;
+
+        // Averages
+        double avgFt = sumFtDelta / count;
+        float r = avgFt > 0 ? 1f : 0.3f;
+        float g = avgFt > 0 ? 0.3f : 1f;
+        textRenderer.drawText(String.format("Avg frameTime: %+.2fms  P100: %+.1fms",
+            avgFt, maxFtDelta), x, y, scale, r, g, 0.3f, w, h);
+        y += lineH;
+
+        double avgBudget = sumBudgetDelta / count;
+        r = avgBudget > 0 ? 1f : 0.3f; g = avgBudget > 0 ? 0.3f : 1f;
+        textRenderer.drawText(String.format("Avg budget: %+.1f%%", avgBudget),
+            x, y, scale, r, g, 0.3f, w, h);
+        y += lineH;
+
+        r = sumAlertDelta > 0 ? 1f : 0.3f; g = sumAlertDelta > 0 ? 0.3f : 0.7f;
+        textRenderer.drawText(String.format("Alert delta: %+d  newE:%d newW:%d",
+            sumAlertDelta, newErrors, newWarnings), x, y, scale, r, g, 0.3f, w, h);
+        y += lineH;
+
+        double avgScore = sumScore / count;
+        r = (float) Math.min(1, avgScore / 60); g = (float) Math.max(0.15, 1 - avgScore / 60);
+        textRenderer.drawText(String.format("Avg score: %.1f", avgScore),
+            x, y, scale, r, g, 0.2f, w, h);
+        y += lineH + 4;
+
+        // Top metric deltas (averaged)
+        var sorted = new java.util.ArrayList<>(metricSums.entrySet());
+        sorted.sort((a, b) -> Double.compare(Math.abs(b.getValue()), Math.abs(a.getValue())));
+        int shown = 0;
+        for (var entry : sorted) {
+            double avg = entry.getValue() / count;
+            if (Math.abs(avg) < 0.3) continue;
+            String name = entry.getKey();
+            if (name.length() > 14) name = name.substring(0, 14);
+            r = (float)(avg > 0 ? 0.9 : 0.3); g = (float)(avg > 0 ? 0.4 : 0.9);
+            textRenderer.drawText(String.format("  %s: %+.2f", name, avg),
+                x, y, scale * 0.85f, r, g, 0.3f, w, h);
+            y += lineH;
+            if (++shown >= 4) break;
+        }
+    }
 
     private static String truncate(String s, int max) {
         return s.length() <= max ? s : s.substring(0, max - 2) + "..";
