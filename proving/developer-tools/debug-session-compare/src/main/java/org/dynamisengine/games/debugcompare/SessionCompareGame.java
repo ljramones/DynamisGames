@@ -15,6 +15,7 @@ import org.dynamisengine.ui.debug.builder.DebugOverlayBuilder;
 import org.dynamisengine.ui.debug.builder.DebugViewSnapshot;
 import org.dynamisengine.ui.debug.export.DebugSessionMetadata;
 import org.dynamisengine.ui.debug.export.DebugSnapshotReplayLoader;
+import org.dynamisengine.ui.debug.export.InvestigationWindow;
 import org.dynamisengine.ui.debug.model.DebugOverlayPanel;
 import org.dynamisengine.ui.debug.runtime.DebugOverlayOptions;
 import org.dynamisengine.worldengine.api.GameContext;
@@ -61,6 +62,8 @@ public final class SessionCompareGame implements WorldApplication {
     static final ActionId RANGE_END = new ActionId("rangeEnd");
     static final ActionId RANGE_CLEAR = new ActionId("rangeClear");
     static final ActionId EXPORT_REPORT = new ActionId("exportReport");
+    static final ActionId CYCLE_LEFT_WINDOW = new ActionId("cycleLeftWin");
+    static final ActionId CYCLE_RIGHT_WINDOW = new ActionId("cycleRightWin");
     static final ActionId QUIT = new ActionId("quit");
     private static final ContextId CTX = new ContextId("compare");
     private static final int KEY_SPACE = 32, KEY_COMMA = 44, KEY_PERIOD = 46;
@@ -68,6 +71,7 @@ public final class SessionCompareGame implements WorldApplication {
     private static final int KEY_1 = 49, KEY_2 = 50, KEY_3 = 51, KEY_TAB = 258;
     private static final int KEY_N = 78, KEY_B = 66;
     private static final int KEY_LEFT_BRACKET = 91, KEY_RIGHT_BRACKET = 93, KEY_R = 82, KEY_E = 69;
+    private static final int KEY_W = 87, KEY_Q = 81;
 
     private final GlfwWindowSubsystem windowSub;
     private final InputWorldSubsystem inputSub;
@@ -98,7 +102,11 @@ public final class SessionCompareGame implements WorldApplication {
 
     // Range selection
     private int rangeStart = -1;
-    private int rangeEnd = -1; // frames where score is a local peak above threshold
+    private int rangeEnd = -1;
+
+    // Window selection (-1 = full session, 0+ = window index)
+    private int leftWindowIndex = -1;
+    private int rightWindowIndex = -1; // frames where score is a local peak above threshold
 
     public SessionCompareGame(GlfwWindowSubsystem w, InputWorldSubsystem i, String left, String right) {
         this.windowSub = w;
@@ -125,6 +133,8 @@ public final class SessionCompareGame implements WorldApplication {
                     Map.entry(RANGE_END, List.of(new KeyBinding(KEY_RIGHT_BRACKET, 0))),
                     Map.entry(RANGE_CLEAR, List.of(new KeyBinding(KEY_R, 0))),
                     Map.entry(EXPORT_REPORT, List.of(new KeyBinding(KEY_E, 0))),
+                    Map.entry(CYCLE_LEFT_WINDOW, List.of(new KeyBinding(KEY_W, 0))),
+                    Map.entry(CYCLE_RIGHT_WINDOW, List.of(new KeyBinding(KEY_Q, 0))),
                     Map.entry(QUIT, List.of(new KeyBinding(KEY_ESC, 0)))),
                 Map.of(),
                 false);
@@ -143,18 +153,28 @@ public final class SessionCompareGame implements WorldApplication {
         leftMeta = loadMeta(leftFile);
         rightMeta = loadMeta(rightFile);
 
-        maxIndex = Math.max(leftSnapshots.size(), rightSnapshots.size()) - 1;
-
-        // Precompute per-frame regression scores and find peaks
-        buildAnomalyIndex();
+        recalculateBounds();
 
         System.out.println("=== Debug Session Compare ===");
         System.out.printf("Left:  %s (%d frames)%n", leftFile, leftSnapshots.size());
         System.out.printf("Right: %s (%d frames)%n", rightFile, rightSnapshots.size());
-        System.out.printf("Anomaly peaks: %d (score >= 10)%n", anomalyPeakIndices.length);
-        if (leftMeta != null) System.out.printf("  Left:  %s / %s%n", leftMeta.scenario(), leftMeta.recordedAt());
-        if (rightMeta != null) System.out.printf("  Right: %s / %s%n", rightMeta.scenario(), rightMeta.recordedAt());
-        System.out.println("Space=play  ,/.=step  N/B=anomaly  Tab=switch  Esc=quit");
+        if (leftMeta != null) {
+            System.out.printf("  Left:  %s / %s%n", leftMeta.scenario(), leftMeta.recordedAt());
+            if (!leftMeta.windows().isEmpty()) {
+                System.out.println("  Left windows:");
+                for (var w : leftMeta.windows())
+                    System.out.printf("    [%s] %d-%d%n", w.name(), w.startFrame() + 1, w.endFrame() + 1);
+            }
+        }
+        if (rightMeta != null) {
+            System.out.printf("  Right: %s / %s%n", rightMeta.scenario(), rightMeta.recordedAt());
+            if (!rightMeta.windows().isEmpty()) {
+                System.out.println("  Right windows:");
+                for (var w : rightMeta.windows())
+                    System.out.printf("    [%s] %d-%d%n", w.name(), w.startFrame() + 1, w.endFrame() + 1);
+            }
+        }
+        System.out.println("W=cycle left window  Q=cycle right  Space=play  N/B=anomaly  Esc=quit");
     }
 
     @Override
@@ -179,6 +199,8 @@ public final class SessionCompareGame implements WorldApplication {
             if (frame.pressed(RANGE_END)) { rangeEnd = currentIndex; System.out.println("Range end: " + (rangeEnd + 1)); }
             if (frame.pressed(RANGE_CLEAR)) { rangeStart = rangeEnd = -1; System.out.println("Range cleared"); }
             if (frame.pressed(EXPORT_REPORT)) exportReport();
+            if (frame.pressed(CYCLE_LEFT_WINDOW)) cycleWindow(true);
+            if (frame.pressed(CYCLE_RIGHT_WINDOW)) cycleWindow(false);
         }
 
         // Process mouse events for timeline scrubbing
@@ -231,9 +253,9 @@ public final class SessionCompareGame implements WorldApplication {
             }
         }
 
-        // Get snapshots for current index
-        var leftSnap = getFrame(leftSnapshots, currentIndex);
-        var rightSnap = getFrame(rightSnapshots, currentIndex);
+        // Get snapshots for current index (window-aware)
+        var leftSnap = getWindowFrame(leftSnapshots, leftMeta, leftWindowIndex, currentIndex);
+        var rightSnap = getWindowFrame(rightSnapshots, rightMeta, rightWindowIndex, currentIndex);
         glViewport(0, 0, w, h);
         glClearColor(0.03f, 0.04f, 0.06f, 1f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -266,8 +288,8 @@ public final class SessionCompareGame implements WorldApplication {
         int activeColor = activeSideLeft ? 0 : 1;
         float lAlpha = activeSideLeft ? 1f : 0.5f;
         float rAlpha = activeSideLeft ? 0.5f : 1f;
-        String leftLabel = leftMeta != null ? leftMeta.scenario() : "LEFT";
-        String rightLabel = rightMeta != null ? rightMeta.scenario() : "RIGHT";
+        String leftLabel = getWindowLabel(leftMeta, leftWindowIndex, "LEFT");
+        String rightLabel = getWindowLabel(rightMeta, rightWindowIndex, "RIGHT");
         textRenderer.drawText("< " + leftLabel + " >", 10, 2, 2.0f,
             0.3f * lAlpha, 1f * lAlpha, 0.6f * lAlpha, w, h);
         textRenderer.drawText("< " + rightLabel + " >", halfW + 10, 2, 2.0f,
@@ -862,6 +884,64 @@ public final class SessionCompareGame implements WorldApplication {
 
     private static String truncate(String s, int max) {
         return s.length() <= max ? s : s.substring(0, max - 2) + "..";
+    }
+
+    // --- Window support ---
+
+    private void recalculateBounds() {
+        int leftLen = getWindowLength(leftSnapshots, leftMeta, leftWindowIndex);
+        int rightLen = getWindowLength(rightSnapshots, rightMeta, rightWindowIndex);
+        maxIndex = Math.max(leftLen, rightLen) - 1;
+        if (maxIndex < 0) maxIndex = 0;
+        currentIndex = Math.min(currentIndex, maxIndex);
+        buildAnomalyIndex();
+    }
+
+    private static int getWindowLength(List<DebugViewSnapshot> snapshots,
+                                        DebugSessionMetadata meta, int windowIndex) {
+        if (windowIndex < 0 || meta == null || windowIndex >= meta.windows().size()) {
+            return snapshots.size();
+        }
+        var w = meta.windows().get(windowIndex);
+        return w.frameCount();
+    }
+
+    private static DebugViewSnapshot getWindowFrame(List<DebugViewSnapshot> snapshots,
+                                                      DebugSessionMetadata meta,
+                                                      int windowIndex, int relativeIndex) {
+        if (windowIndex < 0 || meta == null || windowIndex >= meta.windows().size()) {
+            return getFrame(snapshots, relativeIndex);
+        }
+        var w = meta.windows().get(windowIndex);
+        int absoluteIndex = w.startFrame() + relativeIndex;
+        return getFrame(snapshots, absoluteIndex);
+    }
+
+    private static String getWindowLabel(DebugSessionMetadata meta, int windowIndex, String fallback) {
+        if (meta == null) return fallback;
+        if (windowIndex < 0 || windowIndex >= meta.windows().size()) {
+            return meta.scenario().isEmpty() ? fallback : meta.scenario() + " (full)";
+        }
+        return meta.windows().get(windowIndex).name();
+    }
+
+    private void cycleWindow(boolean left) {
+        if (left) {
+            int count = leftMeta != null ? leftMeta.windows().size() : 0;
+            if (count == 0) { leftWindowIndex = -1; return; }
+            leftWindowIndex = (leftWindowIndex + 1) % (count + 1) - 1; // -1, 0, 1, ..., count-1
+            if (leftWindowIndex < -1) leftWindowIndex = count - 1;
+        } else {
+            int count = rightMeta != null ? rightMeta.windows().size() : 0;
+            if (count == 0) { rightWindowIndex = -1; return; }
+            rightWindowIndex = (rightWindowIndex + 1) % (count + 1) - 1;
+            if (rightWindowIndex < -1) rightWindowIndex = count - 1;
+        }
+        currentIndex = 0;
+        recalculateBounds();
+        System.out.printf("Window: Left=[%s] Right=[%s]%n",
+            getWindowLabel(leftMeta, leftWindowIndex, "full"),
+            getWindowLabel(rightMeta, rightWindowIndex, "full"));
     }
 
     // --- Anomaly index ---
