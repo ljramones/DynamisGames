@@ -49,11 +49,14 @@ public final class SessionCompareGame implements WorldApplication {
     static final ActionId SPEED_NORMAL = new ActionId("speedNormal");
     static final ActionId SPEED_FAST = new ActionId("speedFast");
     static final ActionId SWITCH_SIDE = new ActionId("switchSide");
+    static final ActionId NEXT_ANOMALY = new ActionId("nextAnomaly");
+    static final ActionId PREV_ANOMALY = new ActionId("prevAnomaly");
     static final ActionId QUIT = new ActionId("quit");
     private static final ContextId CTX = new ContextId("compare");
     private static final int KEY_SPACE = 32, KEY_COMMA = 44, KEY_PERIOD = 46;
     private static final int KEY_HOME = 268, KEY_END = 269, KEY_ESC = 256;
     private static final int KEY_1 = 49, KEY_2 = 50, KEY_3 = 51, KEY_TAB = 258;
+    private static final int KEY_N = 78, KEY_B = 66;
 
     private final WindowSubsystem windowSub;
     private final WindowInputSubsystem inputSub;
@@ -71,7 +74,11 @@ public final class SessionCompareGame implements WorldApplication {
     private boolean playing;
     private float playbackSpeed = 1f;
     private float accumulator;
-    private boolean activeSideLeft = true; // highlighted side
+    private boolean activeSideLeft = true;
+
+    // Precomputed anomaly data
+    private float[] perFrameScores;
+    private int[] anomalyPeakIndices; // frames where score is a local peak above threshold
 
     public SessionCompareGame(WindowSubsystem w, WindowInputSubsystem i, String left, String right) {
         this.windowSub = w;
@@ -92,6 +99,8 @@ public final class SessionCompareGame implements WorldApplication {
                     Map.entry(SPEED_NORMAL, List.of(new KeyBinding(KEY_2, 0))),
                     Map.entry(SPEED_FAST, List.of(new KeyBinding(KEY_3, 0))),
                     Map.entry(SWITCH_SIDE, List.of(new KeyBinding(KEY_TAB, 0))),
+                    Map.entry(NEXT_ANOMALY, List.of(new KeyBinding(KEY_N, 0))),
+                    Map.entry(PREV_ANOMALY, List.of(new KeyBinding(KEY_B, 0))),
                     Map.entry(QUIT, List.of(new KeyBinding(KEY_ESC, 0)))),
                 Map.of(),
                 false);
@@ -112,12 +121,16 @@ public final class SessionCompareGame implements WorldApplication {
 
         maxIndex = Math.max(leftSnapshots.size(), rightSnapshots.size()) - 1;
 
+        // Precompute per-frame regression scores and find peaks
+        buildAnomalyIndex();
+
         System.out.println("=== Debug Session Compare ===");
         System.out.printf("Left:  %s (%d frames)%n", leftFile, leftSnapshots.size());
         System.out.printf("Right: %s (%d frames)%n", rightFile, rightSnapshots.size());
+        System.out.printf("Anomaly peaks: %d (score >= 10)%n", anomalyPeakIndices.length);
         if (leftMeta != null) System.out.printf("  Left:  %s / %s%n", leftMeta.scenario(), leftMeta.recordedAt());
         if (rightMeta != null) System.out.printf("  Right: %s / %s%n", rightMeta.scenario(), rightMeta.recordedAt());
-        System.out.println("Space=play  ,/.=step  Tab=switch side  1/2/3=speed  Esc=quit");
+        System.out.println("Space=play  ,/.=step  N/B=anomaly  Tab=switch  Esc=quit");
     }
 
     @Override
@@ -136,6 +149,8 @@ public final class SessionCompareGame implements WorldApplication {
             if (frame.pressed(SPEED_NORMAL)) playbackSpeed = 1f;
             if (frame.pressed(SPEED_FAST)) playbackSpeed = 2f;
             if (frame.pressed(SWITCH_SIDE)) activeSideLeft = !activeSideLeft;
+            if (frame.pressed(NEXT_ANOMALY)) jumpToNextAnomaly();
+            if (frame.pressed(PREV_ANOMALY)) jumpToPrevAnomaly();
         }
 
         // Auto-advance
@@ -201,10 +216,36 @@ public final class SessionCompareGame implements WorldApplication {
         // Diff summary at center
         renderDiffSummary(leftSnap, rightSnap, halfW, w, h);
 
-        // Progress bar
+        // Progress bar with anomaly markers
         float barY = h - 55;
         float barW = w - 20;
         textRenderer.drawRect(10, barY, barW, 6, 0.2f, 0.2f, 0.2f, 0.8f, w, h);
+
+        // Score heatmap on progress bar (faint background colored by score)
+        if (perFrameScores != null && maxIndex > 0) {
+            int segments = Math.min(200, maxIndex + 1);
+            float segW = barW / segments;
+            for (int s = 0; s < segments; s++) {
+                int frameIdx = (int)((float) s / segments * maxIndex);
+                if (frameIdx < perFrameScores.length) {
+                    float score = perFrameScores[frameIdx];
+                    if (score > 5f) {
+                        float intensity = Math.min(1f, score / 60f);
+                        textRenderer.drawRect(10 + s * segW, barY - 1, segW + 1, 8,
+                            intensity, 0.1f, 0.05f, 0.6f, w, h);
+                    }
+                }
+            }
+
+            // Anomaly peak ticks
+            for (int pi : anomalyPeakIndices) {
+                float px = 10 + barW * ((float) pi / maxIndex);
+                float score = perFrameScores[pi];
+                float r = score >= 60 ? 1f : (score >= 30 ? 1f : 0.9f);
+                float g = score >= 60 ? 0.15f : (score >= 30 ? 0.3f : 0.6f);
+                textRenderer.drawRect(px, barY - 4, 2, 14, r, g, 0.1f, 0.9f, w, h);
+            }
+        }
         if (maxIndex > 0) {
             float progress = (float) currentIndex / maxIndex;
             textRenderer.drawRect(10, barY, barW * progress, 6, 0.3f, 1f, 0.5f, 0.9f, w, h);
@@ -412,6 +453,97 @@ public final class SessionCompareGame implements WorldApplication {
 
     private static String truncate(String s, int max) {
         return s.length() <= max ? s : s.substring(0, max - 2) + "..";
+    }
+
+    // --- Anomaly index ---
+
+    private void buildAnomalyIndex() {
+        int totalFrames = maxIndex + 1;
+        perFrameScores = new float[totalFrames];
+
+        // Compute score for every frame
+        for (int i = 0; i < totalFrames; i++) {
+            var left = getFrame(leftSnapshots, i);
+            var right = getFrame(rightSnapshots, i);
+            perFrameScores[i] = computeScore(left, right);
+        }
+
+        // Find local peaks (score > neighbors and above threshold)
+        var peaks = new java.util.ArrayList<Integer>();
+        float peakThreshold = 10f;
+        for (int i = 1; i < totalFrames - 1; i++) {
+            if (perFrameScores[i] >= peakThreshold
+                && perFrameScores[i] >= perFrameScores[i - 1]
+                && perFrameScores[i] >= perFrameScores[i + 1]) {
+                // Deduplicate: skip if too close to last peak
+                if (peaks.isEmpty() || i - peaks.getLast() > 10) {
+                    peaks.add(i);
+                }
+            }
+        }
+        anomalyPeakIndices = peaks.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    private float computeScore(DebugViewSnapshot left, DebugViewSnapshot right) {
+        float score = 0f;
+
+        float ftDelta = right.summary().frameTimeMs() - left.summary().frameTimeMs();
+        if (ftDelta > DELTA_THRESHOLD) score += ftDelta * W_FRAME_TIME;
+
+        float budgetDelta = right.summary().budgetPercent() - left.summary().budgetPercent();
+        if (budgetDelta > 1f) score += budgetDelta * W_BUDGET;
+
+        int alertDelta = right.alerts().size() - left.alerts().size();
+        if (alertDelta > 0) score += alertDelta * W_ALERT_COUNT;
+
+        for (var ra : right.alerts()) {
+            boolean isNew = left.alerts().stream().noneMatch(a -> a.ruleName().equals(ra.ruleName()));
+            if (isNew) score += "ERROR".equals(ra.severity()) ? W_NEW_ERROR : W_NEW_WARNING;
+        }
+
+        for (var catKey : left.categories().keySet()) {
+            var leftCat = left.categories().get(catKey);
+            var rightCat = right.categories().get(catKey);
+            if (rightCat == null) continue;
+            for (var srcEntry : leftCat.sources().entrySet()) {
+                var rightSrc = rightCat.sources().get(srcEntry.getKey());
+                if (rightSrc == null) continue;
+                for (var metricEntry : srcEntry.getValue().entrySet()) {
+                    String rightVal = rightSrc.get(metricEntry.getKey());
+                    if (rightVal == null) continue;
+                    try {
+                        double delta = Double.parseDouble(rightVal) - Double.parseDouble(metricEntry.getValue());
+                        if (delta > DELTA_THRESHOLD) score += (float)(delta * W_METRIC);
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+
+        return score;
+    }
+
+    private void jumpToNextAnomaly() {
+        for (int pi : anomalyPeakIndices) {
+            if (pi > currentIndex) {
+                currentIndex = pi;
+                playing = false;
+                System.out.printf("-> Anomaly peak: frame %d (score: %.0f)%n",
+                    currentIndex + 1, perFrameScores[currentIndex]);
+                return;
+            }
+        }
+    }
+
+    private void jumpToPrevAnomaly() {
+        for (int i = anomalyPeakIndices.length - 1; i >= 0; i--) {
+            if (anomalyPeakIndices[i] < currentIndex) {
+                currentIndex = anomalyPeakIndices[i];
+                playing = false;
+                System.out.printf("-> Anomaly peak: frame %d (score: %.0f)%n",
+                    currentIndex + 1, perFrameScores[currentIndex]);
+                return;
+            }
+        }
     }
 
     private static DebugSessionMetadata loadMeta(String ndjsonFile) {
