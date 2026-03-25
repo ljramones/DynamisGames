@@ -73,6 +73,7 @@ public final class SessionPlayerGame implements WorldApplication {
     static final ActionId SAVE_WINDOW = new ActionId("saveWindow");
     static final ActionId NEXT_WINDOW = new ActionId("nextWindow");
     static final ActionId PREV_WINDOW = new ActionId("prevWindow");
+    static final ActionId CYCLE_NOTE = new ActionId("cycleNote");
     static final ActionId QUIT = new ActionId("quit");
     private static final ContextId CTX = new ContextId("player");
     private static final int KEY_TAB = 258, KEY_F = 70, KEY_SPACE = 32;
@@ -81,7 +82,7 @@ public final class SessionPlayerGame implements WorldApplication {
     private static final int KEY_HOME = 268, KEY_END = 269;
     private static final int KEY_1 = 49, KEY_2 = 50, KEY_3 = 51;
     private static final int KEY_N = 78, KEY_B = 66, KEY_M = 77, KEY_J = 74, KEY_L = 76;
-    private static final int KEY_K = 75, KEY_SEMICOLON = 59, KEY_APOSTROPHE = 39;
+    private static final int KEY_K = 75, KEY_SEMICOLON = 59, KEY_APOSTROPHE = 39, KEY_O = 79;
 
     private final GlfwWindowSubsystem windowSub;
     private final InputWorldSubsystem inputSub;
@@ -114,6 +115,20 @@ public final class SessionPlayerGame implements WorldApplication {
         "regression", "good baseline"
     };
 
+    // Preset notes for quick annotation (cycle with Shift+L / O key)
+    private static final String[] PRESET_NOTES = {
+        "first bad spike after entity burst",
+        "audio issue looks unrelated to frame collapse",
+        "this recovery is acceptable",
+        "ignore this peak, known warmup artifact",
+        "root cause appears to be ECS entity flood",
+        "physics step time is the leading indicator here",
+        "this is the regression onset point",
+        "compare with baseline to confirm",
+        "audio DSP pressure independent of gameplay load",
+        "acceptable performance, within budget"
+    };
+
     public SessionPlayerGame(GlfwWindowSubsystem w, InputWorldSubsystem i, String sessionFile) {
         this.windowSub = w;
         this.inputSub = i;
@@ -143,6 +158,7 @@ public final class SessionPlayerGame implements WorldApplication {
                     Map.entry(SAVE_WINDOW, List.of(new KeyBinding(KEY_K, 0))),
                     Map.entry(NEXT_WINDOW, List.of(new KeyBinding(KEY_APOSTROPHE, 0))),
                     Map.entry(PREV_WINDOW, List.of(new KeyBinding(KEY_SEMICOLON, 0))),
+                    Map.entry(CYCLE_NOTE, List.of(new KeyBinding(KEY_O, 0))),
                     Map.entry(QUIT, List.of(new KeyBinding(KEY_ESC, 0)))),
                 Map.of(),
                 false);
@@ -212,7 +228,7 @@ public final class SessionPlayerGame implements WorldApplication {
         currentIndex = 0;
         playing = false;
 
-        System.out.println("Space=play  N/B=event  M=bm  K=save window  ;/'=cycle windows  F=focus  Esc=quit");
+        System.out.println("Space=play  N/B=event  M=bm L=label O=note K=win  ;/'=cycle windows  F=focus  Esc=quit");
     }
 
     @Override
@@ -242,6 +258,7 @@ public final class SessionPlayerGame implements WorldApplication {
             if (frame.pressed(SAVE_WINDOW)) saveCurrentWindow();
             if (frame.pressed(NEXT_WINDOW)) jumpToNextWindow();
             if (frame.pressed(PREV_WINDOW)) jumpToPrevWindow();
+            if (frame.pressed(CYCLE_NOTE)) cycleNoteOnCurrentBookmark();
         }
 
         // Auto-advance when playing
@@ -329,7 +346,7 @@ public final class SessionPlayerGame implements WorldApplication {
                 eventFrameIndices.length, bmInfo, winInfo),
                 10, h - 45, 2.0f, 0.8f, 0.8f, 0.4f, w, h);
             textRenderer.drawText(
-                "Space=play  N/B=event  M=bm  K=window  ;/'=cycle win  F=focus  Esc=quit",
+                "Space=play  N/B=event  M=bm L=label O=note K=win  ;/'=cycle win  F=focus  Esc=quit",
                 10, h - 20, 1.6f, 0.4f, 0.4f, 0.5f, w, h);
             textRenderer.endFrame();
         }
@@ -431,12 +448,33 @@ public final class SessionPlayerGame implements WorldApplication {
                     if (PRESET_LABELS[j].equals(currentLabel)) { presetIdx = j; break; }
                 }
                 String newLabel = PRESET_LABELS[(presetIdx + 1) % PRESET_LABELS.length];
-                bookmarks.set(i, new DebugSessionMetadata.Bookmark(currentIndex, newLabel));
+                var old = bookmarks.get(i);
+                bookmarks.set(i, new DebugSessionMetadata.Bookmark(currentIndex, newLabel, old.note()));
                 System.out.printf("Bookmark relabeled: frame %d [%s]%n", currentIndex + 1, newLabel);
                 return;
             }
         }
         // No bookmark at current frame — create one first
+        addBookmark();
+    }
+
+    private void cycleNoteOnCurrentBookmark() {
+        for (int i = 0; i < bookmarks.size(); i++) {
+            if (bookmarks.get(i).frameIndex() == currentIndex) {
+                String currentNote = bookmarks.get(i).note();
+                // Find current note in presets and cycle to next
+                int presetIdx = -1;
+                for (int j = 0; j < PRESET_NOTES.length; j++) {
+                    if (PRESET_NOTES[j].equals(currentNote)) { presetIdx = j; break; }
+                }
+                String newNote = PRESET_NOTES[(presetIdx + 1) % PRESET_NOTES.length];
+                var old = bookmarks.get(i);
+                bookmarks.set(i, new DebugSessionMetadata.Bookmark(currentIndex, old.label(), newNote));
+                System.out.printf("Bookmark note: frame %d [%s] -> \"%s\"%n", currentIndex + 1, old.label(), newNote);
+                return;
+            }
+        }
+        // No bookmark — create one first, then user can cycle note
         addBookmark();
     }
 
