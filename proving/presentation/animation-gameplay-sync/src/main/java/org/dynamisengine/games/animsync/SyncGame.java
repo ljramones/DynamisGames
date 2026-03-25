@@ -1,12 +1,14 @@
 package org.dynamisengine.games.animsync;
 
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.animis.clip.AnimationEvent;
 import org.dynamisengine.animis.runtime.transform.PropertyBlender;
 import org.dynamisengine.animis.runtime.transform.PropertyPlayer;
 import org.dynamisengine.animis.transform.PropertyClip;
 import org.dynamisengine.audio.api.AcousticConstants;
 import org.dynamisengine.audio.procedural.*;
-import org.dynamisengine.games.animsync.subsystem.*;
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.input.api.context.InputMap;
@@ -45,9 +47,9 @@ public final class SyncGame implements WorldApplication {
     private static final int KEY_Q=81,KEY_E=69,KEY_SPACE=32,KEY_P=80;
     private static final int KEY_ESC=256,KEY_R=82;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final SceneRenderer renderer = new SceneRenderer();
 
     private MeshHandle torusMesh, sphereMesh, cubeMesh;
@@ -76,7 +78,7 @@ public final class SyncGame implements WorldApplication {
     // Camera
     private float orbitYaw = 20f, orbitPitch = 20f, orbitDist = 8f;
 
-    public SyncGame(WindowSubsystem w, WindowInputSubsystem i, AudioSubsystem a) {
+    public SyncGame(GlfwWindowSubsystem w, WindowInputWorldSubsystem i, AudioWorldSubsystem a) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a;
     }
 

@@ -1,8 +1,8 @@
 package org.dynamisengine.games.interaction;
 
-import org.dynamisengine.games.interaction.subsystem.AudioSubsystem;
-import org.dynamisengine.games.interaction.subsystem.WindowInputSubsystem;
-import org.dynamisengine.games.interaction.subsystem.WindowSubsystem;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.input.core.DefaultInputProcessor;
 import org.dynamisengine.worldengine.api.WorldEngine;
 
@@ -12,10 +12,10 @@ import org.dynamisengine.worldengine.api.WorldEngine;
 public final class Main {
 
     public static void main(String[] args) {
-        var windowSub = new WindowSubsystem("Dynamis — Interaction", 640, 480);
+        var windowSub = new GlfwWindowSubsystem("Dynamis — Interaction", 640, 480);
         var processor = InteractionGame.createProcessor();
-        var inputSub = new WindowInputSubsystem(windowSub, processor);
-        var audioSub = new AudioSubsystem();
+        var inputSub = new WindowInputWorldSubsystem(windowSub, processor);
+        var audioSub = new AudioWorldSubsystem();
 
         WorldEngine.builder()
                 .application(new InteractionGame(windowSub, inputSub, audioSub, processor))

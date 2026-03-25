@@ -1,8 +1,10 @@
 package org.dynamisengine.games.anim;
 
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.animis.runtime.transform.PropertyPlayer;
 import org.dynamisengine.animis.transform.PropertyClip;
-import org.dynamisengine.games.anim.subsystem.*;
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.input.api.context.InputMap;
@@ -42,9 +44,9 @@ public final class AnimationGame implements WorldApplication {
     private static final int KEY_MINUS=45,KEY_EQUAL=61;
     private static final int KEY_ESC=256,KEY_R=82;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final SceneRenderer renderer = new SceneRenderer();
 
     private MeshHandle torusMesh, sphereMesh, cubeMesh;
@@ -56,7 +58,7 @@ public final class AnimationGame implements WorldApplication {
     // Camera
     private float orbitYaw = 30f, orbitPitch = 25f, orbitDist = 10f;
 
-    public AnimationGame(WindowSubsystem w, WindowInputSubsystem i, AudioSubsystem a) {
+    public AnimationGame(GlfwWindowSubsystem w, WindowInputWorldSubsystem i, AudioWorldSubsystem a) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a;
     }
 

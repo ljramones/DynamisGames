@@ -1,12 +1,12 @@
 package org.dynamisengine.games.renderbasics;
 
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.core.entity.EntityId;
 import org.dynamisengine.ecs.api.component.ComponentKey;
 import org.dynamisengine.ecs.api.query.QueryBuilder;
 import org.dynamisengine.ecs.api.world.World;
-import org.dynamisengine.games.renderbasics.subsystem.AudioSubsystem;
-import org.dynamisengine.games.renderbasics.subsystem.WindowInputSubsystem;
-import org.dynamisengine.games.renderbasics.subsystem.WindowSubsystem;
 import org.dynamisengine.audio.api.AcousticConstants;
 import org.dynamisengine.audio.procedural.*;
 import org.dynamisengine.input.api.ActionId;
@@ -62,16 +62,16 @@ public final class RenderBasicsGame implements WorldApplication {
     private static final int KEY_UP=265, KEY_DOWN=264, KEY_LEFT=263, KEY_RIGHT=262;
     private static final int KEY_SPACE=32, KEY_ESC=256;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final DefaultInputProcessor processor;
     private final SimpleRenderer renderer = new SimpleRenderer();
 
     private EntityId playerEntity;
 
-    public RenderBasicsGame(WindowSubsystem w, WindowInputSubsystem i,
-                            AudioSubsystem a, DefaultInputProcessor p) {
+    public RenderBasicsGame(GlfwWindowSubsystem w, WindowInputWorldSubsystem i,
+                            AudioWorldSubsystem a, DefaultInputProcessor p) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a; this.processor = p;
     }
 

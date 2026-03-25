@@ -1,6 +1,8 @@
 package org.dynamisengine.games.lepresets;
 
-import org.dynamisengine.games.lepresets.subsystem.*;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.input.api.context.InputMap;
@@ -42,9 +44,9 @@ public final class PresetsGame implements WorldApplication {
     private static final int KEY_1=49,KEY_2=50,KEY_3=51,KEY_4=52;
     private static final int KEY_ESC=256;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final SceneRenderer renderer = new SceneRenderer();
 
     private MeshHandle torusMesh, sphereMesh, cubeMesh;
@@ -60,7 +62,7 @@ public final class PresetsGame implements WorldApplication {
 
     private static final String[] PRESET_NAMES = {"Showcase", "Studio", "Night", "Debug"};
 
-    public PresetsGame(WindowSubsystem w, WindowInputSubsystem i, AudioSubsystem a) {
+    public PresetsGame(GlfwWindowSubsystem w, WindowInputWorldSubsystem i, AudioWorldSubsystem a) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a;
     }
 

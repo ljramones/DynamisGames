@@ -1,5 +1,6 @@
 package org.dynamisengine.games.debug;
 
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
 import org.dynamisengine.light.impl.opengl.OpenGlDebugOverlayRenderer;
 import org.dynamisengine.light.impl.opengl.OpenGlTextRenderer;
 import org.dynamisengine.input.runtime.InputWorldSubsystem;
@@ -12,7 +13,6 @@ import org.dynamisengine.core.entity.EntityId;
 import org.dynamisengine.ecs.api.component.ComponentKey;
 import org.dynamisengine.ecs.api.query.QueryBuilder;
 import org.dynamisengine.ecs.api.world.World;
-import org.dynamisengine.games.debug.subsystem.*;
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.input.api.context.InputMap;
@@ -63,7 +63,7 @@ public final class DebugOverlayGame implements WorldApplication {
 
     private final GlfwWindowSubsystem windowSub;
     private final InputWorldSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final AudioWorldSubsystem audioSub;
     private final OpenGlTextRenderer textRenderer = new OpenGlTextRenderer();
     private final DebugSpineOverlay spineOverlay = new DebugSpineOverlay();
     private OpenGlDebugOverlayRenderer overlayRenderer;
@@ -71,7 +71,7 @@ public final class DebugOverlayGame implements WorldApplication {
     private boolean overlayVisible = true;
     private int particlesSpawned = 0;
 
-    public DebugOverlayGame(GlfwWindowSubsystem w, InputWorldSubsystem i, AudioSubsystem a) {
+    public DebugOverlayGame(GlfwWindowSubsystem w, InputWorldSubsystem i, AudioWorldSubsystem a) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a;
     }
 

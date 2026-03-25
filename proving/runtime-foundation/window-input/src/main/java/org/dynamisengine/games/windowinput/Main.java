@@ -1,7 +1,7 @@
 package org.dynamisengine.games.windowinput;
 
-import org.dynamisengine.games.windowinput.subsystem.WindowInputSubsystem;
-import org.dynamisengine.games.windowinput.subsystem.WindowSubsystem;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.input.core.DefaultInputProcessor;
 import org.dynamisengine.worldengine.api.WorldEngine;
 
@@ -14,9 +14,9 @@ import org.dynamisengine.worldengine.api.WorldEngine;
 public final class Main {
 
     public static void main(String[] args) {
-        var windowSubsystem = new WindowSubsystem("Dynamis — Input Demo", 800, 600);
+        var windowSubsystem = new GlfwWindowSubsystem("Dynamis — Input Demo", 800, 600);
         DefaultInputProcessor processor = WindowInputBindings.createProcessor();
-        var inputSubsystem = new WindowInputSubsystem(windowSubsystem, processor);
+        var inputSubsystem = new WindowInputWorldSubsystem(windowSubsystem, processor);
 
         WorldEngine.builder()
                 .application(new WindowInputGame(windowSubsystem, inputSubsystem))

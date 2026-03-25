@@ -1,12 +1,14 @@
 package org.dynamisengine.games.text;
 
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.audio.api.AcousticConstants;
 import org.dynamisengine.audio.procedural.*;
 import org.dynamisengine.core.entity.EntityId;
 import org.dynamisengine.ecs.api.component.ComponentKey;
 import org.dynamisengine.ecs.api.query.QueryBuilder;
 import org.dynamisengine.ecs.api.world.World;
-import org.dynamisengine.games.text.subsystem.*;
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.input.api.context.InputMap;
@@ -60,9 +62,9 @@ public final class TextGame implements WorldApplication {
     private static final int KEY_UP=265, KEY_DOWN=264, KEY_LEFT=263, KEY_RIGHT=262;
     private static final int KEY_SPACE=32, KEY_R=82, KEY_ESC=256;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final TextRenderer textRenderer = new TextRenderer();
 
     private EntityId playerEntity;
@@ -75,7 +77,7 @@ public final class TextGame implements WorldApplication {
     // Render arrays
     private final float[] pX = new float[256], pY = new float[256], pP = new float[256];
 
-    public TextGame(WindowSubsystem w, WindowInputSubsystem i, AudioSubsystem a) {
+    public TextGame(GlfwWindowSubsystem w, WindowInputWorldSubsystem i, AudioWorldSubsystem a) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a;
     }
 

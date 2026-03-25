@@ -1,10 +1,12 @@
 package org.dynamisengine.games.animblend;
 
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.animis.runtime.transform.PropertyBlender;
 import org.dynamisengine.animis.transform.PropertyClip;
 import org.dynamisengine.audio.api.AcousticConstants;
 import org.dynamisengine.audio.procedural.*;
-import org.dynamisengine.games.animblend.subsystem.*;
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.input.api.context.InputMap;
@@ -46,9 +48,9 @@ public final class BlendGame implements WorldApplication {
 
     private static final float BLEND_DURATION = 0.75f;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final SceneRenderer renderer = new SceneRenderer();
 
     private MeshHandle torusMesh, cubeMesh, sphereMesh;
@@ -58,7 +60,7 @@ public final class BlendGame implements WorldApplication {
     private float orbitYaw = 30f, orbitPitch = 25f, orbitDist = 9f;
     private int transitionCount = 0;
 
-    public BlendGame(WindowSubsystem w, WindowInputSubsystem i, AudioSubsystem a) {
+    public BlendGame(GlfwWindowSubsystem w, WindowInputWorldSubsystem i, AudioWorldSubsystem a) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a;
     }
 

@@ -1,6 +1,8 @@
 package org.dynamisengine.games.mgi;
 
-import org.dynamisengine.games.mgi.subsystem.*;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.input.api.context.InputMap;
@@ -49,9 +51,9 @@ public final class MgiGame implements WorldApplication {
     private static final int KEY_UP=265,KEY_DOWN=264,KEY_LEFT=263,KEY_RIGHT=262;
     private static final int KEY_Q=81,KEY_E=69,KEY_ESC=256,KEY_R=82;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final SceneRenderer renderer = new SceneRenderer();
 
     private MeshHandle mgiMeshHandle;
@@ -61,7 +63,7 @@ public final class MgiGame implements WorldApplication {
     private float orbitYaw = 30f, orbitPitch = 25f, orbitDist = 5f;
     private float time = 0;
 
-    public MgiGame(WindowSubsystem w, WindowInputSubsystem i, AudioSubsystem a) {
+    public MgiGame(GlfwWindowSubsystem w, WindowInputWorldSubsystem i, AudioWorldSubsystem a) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a;
     }
 

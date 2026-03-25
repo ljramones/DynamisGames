@@ -1,7 +1,7 @@
 package org.dynamisengine.games.windowinput;
 
-import org.dynamisengine.games.windowinput.subsystem.WindowInputSubsystem;
-import org.dynamisengine.games.windowinput.subsystem.WindowSubsystem;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.input.api.frame.InputFrame;
 import org.dynamisengine.input.api.gesture.GestureFrame;
 import org.dynamisengine.input.core.GestureRecognizer;
@@ -19,14 +19,14 @@ import static org.dynamisengine.games.windowinput.WindowInputBindings.*;
  */
 public final class WindowInputGame implements WorldApplication {
 
-    private final WindowSubsystem windowSubsystem;
-    private final WindowInputSubsystem inputSubsystem;
+    private final GlfwWindowSubsystem windowSubsystem;
+    private final WindowInputWorldSubsystem inputSubsystem;
     private GestureRecognizer recognizer;
     private float playerX = 0.0f;
     private long totalEvents = 0;
 
-    public WindowInputGame(WindowSubsystem windowSubsystem,
-                           WindowInputSubsystem inputSubsystem) {
+    public WindowInputGame(GlfwWindowSubsystem windowSubsystem,
+                           WindowInputWorldSubsystem inputSubsystem) {
         this.windowSubsystem = windowSubsystem;
         this.inputSubsystem = inputSubsystem;
     }

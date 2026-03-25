@@ -1,5 +1,8 @@
 package org.dynamisengine.games.arena;
 
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.audio.api.AcousticConstants;
 import org.dynamisengine.audio.procedural.*;
 import org.dynamisengine.core.entity.EntityId;
@@ -7,7 +10,6 @@ import org.dynamisengine.ecs.api.component.ComponentKey;
 import org.dynamisengine.ecs.api.query.QueryBuilder;
 import org.dynamisengine.ecs.api.query.QuerySpec;
 import org.dynamisengine.ecs.api.world.World;
-import org.dynamisengine.games.arena.subsystem.*;
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.input.api.context.InputMap;
@@ -63,9 +65,9 @@ public final class ArenaGame implements WorldApplication {
     private static final int TOTAL_WAVES = 3;
     private static final int MAX_MISSES = 5;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final ArenaRenderer renderer = new ArenaRenderer();
 
     private EntityId playerEntity;
@@ -78,7 +80,7 @@ public final class ArenaGame implements WorldApplication {
     private final float[] pX=new float[256],pY=new float[256],pP=new float[256];
     private final float[] tX=new float[64],tY=new float[64],tR=new float[64];
 
-    public ArenaGame(WindowSubsystem w, WindowInputSubsystem i, AudioSubsystem a) {
+    public ArenaGame(GlfwWindowSubsystem w, WindowInputWorldSubsystem i, AudioWorldSubsystem a) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a;
     }
 

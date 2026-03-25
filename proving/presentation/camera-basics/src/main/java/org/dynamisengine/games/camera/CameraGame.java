@@ -1,8 +1,10 @@
 package org.dynamisengine.games.camera;
 
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.audio.api.AcousticConstants;
 import org.dynamisengine.audio.procedural.*;
-import org.dynamisengine.games.camera.subsystem.*;
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.input.api.context.InputMap;
@@ -38,9 +40,9 @@ public final class CameraGame implements WorldApplication {
     private static final int KEY_Q=81, KEY_E=69;
     private static final int KEY_ESC=256, KEY_R=82;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final Scene3DRenderer renderer = new Scene3DRenderer();
 
     // Camera state
@@ -48,7 +50,7 @@ public final class CameraGame implements WorldApplication {
     private float orbitPitch = 30f;  // degrees
     private float orbitDist = 8f;    // distance from center
 
-    public CameraGame(WindowSubsystem w, WindowInputSubsystem i, AudioSubsystem a) {
+    public CameraGame(GlfwWindowSubsystem w, WindowInputWorldSubsystem i, AudioWorldSubsystem a) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a;
     }
 

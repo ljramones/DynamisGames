@@ -1,14 +1,14 @@
 package org.dynamisengine.games.interrendered;
 
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.audio.api.AcousticConstants;
 import org.dynamisengine.audio.procedural.*;
 import org.dynamisengine.core.entity.EntityId;
 import org.dynamisengine.ecs.api.component.ComponentKey;
 import org.dynamisengine.ecs.api.query.QueryBuilder;
 import org.dynamisengine.ecs.api.world.World;
-import org.dynamisengine.games.interrendered.subsystem.AudioSubsystem;
-import org.dynamisengine.games.interrendered.subsystem.WindowInputSubsystem;
-import org.dynamisengine.games.interrendered.subsystem.WindowSubsystem;
 import org.dynamisengine.input.api.ActionId;
 import org.dynamisengine.input.api.AxisId;
 import org.dynamisengine.input.api.ContextId;
@@ -61,9 +61,9 @@ public final class InteractionRenderedGame implements WorldApplication {
     private static final int KEY_UP=265, KEY_DOWN=264, KEY_LEFT=263, KEY_RIGHT=262;
     private static final int KEY_SPACE=32, KEY_R=82, KEY_ESC=256;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final DefaultInputProcessor processor;
     private final SceneRenderer renderer = new SceneRenderer();
 
@@ -75,8 +75,8 @@ public final class InteractionRenderedGame implements WorldApplication {
     private EntityId playerEntity;
     private long totalSpawned = 0;
 
-    public InteractionRenderedGame(WindowSubsystem w, WindowInputSubsystem i,
-                                   AudioSubsystem a, DefaultInputProcessor p) {
+    public InteractionRenderedGame(GlfwWindowSubsystem w, WindowInputWorldSubsystem i,
+                                   AudioWorldSubsystem a, DefaultInputProcessor p) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a; this.processor = p;
     }
 

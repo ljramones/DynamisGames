@@ -1,8 +1,8 @@
 package org.dynamisengine.games.audiobasics;
 
-import org.dynamisengine.games.audiobasics.subsystem.AudioSubsystem;
-import org.dynamisengine.games.audiobasics.subsystem.WindowInputSubsystem;
-import org.dynamisengine.games.audiobasics.subsystem.WindowSubsystem;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.input.api.ActionId;
 import org.dynamisengine.input.api.AxisId;
 import org.dynamisengine.input.api.ContextId;
@@ -39,14 +39,14 @@ public final class AudioBasicsGame implements WorldApplication {
     private static final int KEY_1 = 49, KEY_2 = 50, KEY_3 = 51, KEY_4 = 52;
     private static final int KEY_ESC = 256;
 
-    private final WindowSubsystem windowSubsystem;
-    private final WindowInputSubsystem inputSubsystem;
-    private final AudioSubsystem audioSubsystem;
+    private final GlfwWindowSubsystem windowSubsystem;
+    private final WindowInputWorldSubsystem inputSubsystem;
+    private final AudioWorldSubsystem audioSubsystem;
     private final DefaultInputProcessor processor;
     private DemoSoundBank soundBank;
 
-    public AudioBasicsGame(WindowSubsystem windowSub, WindowInputSubsystem inputSub,
-                           AudioSubsystem audioSub, DefaultInputProcessor processor) {
+    public AudioBasicsGame(GlfwWindowSubsystem windowSub, WindowInputWorldSubsystem inputSub,
+                           AudioWorldSubsystem audioSub, DefaultInputProcessor processor) {
         this.windowSubsystem = windowSub;
         this.inputSubsystem = inputSub;
         this.audioSubsystem = audioSub;

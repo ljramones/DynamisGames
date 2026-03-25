@@ -1,6 +1,8 @@
 package org.dynamisengine.games.lighting;
 
-import org.dynamisengine.games.lighting.subsystem.*;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.input.api.context.InputMap;
@@ -38,9 +40,9 @@ public final class LightingGame implements WorldApplication {
     private static final int KEY_Q=81,KEY_E=69,KEY_1=49,KEY_2=50,KEY_3=51;
     private static final int KEY_ESC=256,KEY_R=82;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final LightingRenderer renderer = new LightingRenderer();
 
     private MeshHandle torusHandle;
@@ -65,7 +67,7 @@ public final class LightingGame implements WorldApplication {
                     SimpleMaterial.ShadingMode.LIT) // purple
     };
 
-    public LightingGame(WindowSubsystem w, WindowInputSubsystem i, AudioSubsystem a) {
+    public LightingGame(GlfwWindowSubsystem w, WindowInputWorldSubsystem i, AudioWorldSubsystem a) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a;
     }
 

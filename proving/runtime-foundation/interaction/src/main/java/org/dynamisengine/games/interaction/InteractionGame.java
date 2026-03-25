@@ -1,8 +1,8 @@
 package org.dynamisengine.games.interaction;
 
-import org.dynamisengine.games.interaction.subsystem.AudioSubsystem;
-import org.dynamisengine.games.interaction.subsystem.WindowInputSubsystem;
-import org.dynamisengine.games.interaction.subsystem.WindowSubsystem;
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.input.api.ActionId;
 import org.dynamisengine.input.api.AxisId;
 import org.dynamisengine.input.api.ContextId;
@@ -41,9 +41,9 @@ public final class InteractionGame implements WorldApplication {
     private static final int KEY_UP = 265, KEY_DOWN = 264, KEY_LEFT = 263, KEY_RIGHT = 262;
     private static final int KEY_SPACE = 32, KEY_R = 82, KEY_ESC = 256;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final DefaultInputProcessor processor;
 
     private InteractionState state;
@@ -52,8 +52,8 @@ public final class InteractionGame implements WorldApplication {
     private static final float PULSE_LIFETIME = 2.0f;
     private boolean wasMoving = false;
 
-    public InteractionGame(WindowSubsystem windowSub, WindowInputSubsystem inputSub,
-                           AudioSubsystem audioSub, DefaultInputProcessor processor) {
+    public InteractionGame(GlfwWindowSubsystem windowSub, WindowInputWorldSubsystem inputSub,
+                           AudioWorldSubsystem audioSub, DefaultInputProcessor processor) {
         this.windowSub = windowSub;
         this.inputSub = inputSub;
         this.audioSub = audioSub;

@@ -1,11 +1,13 @@
 package org.dynamisengine.games.animevents;
 
+import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
+import org.dynamisengine.audio.world.AudioWorldSubsystem;
+import org.dynamisengine.input.window.WindowInputWorldSubsystem;
 import org.dynamisengine.animis.clip.AnimationEvent;
 import org.dynamisengine.animis.runtime.transform.PropertyPlayer;
 import org.dynamisengine.animis.transform.PropertyClip;
 import org.dynamisengine.audio.api.AcousticConstants;
 import org.dynamisengine.audio.procedural.*;
-import org.dynamisengine.games.animevents.subsystem.*;
 import org.dynamisengine.input.api.*;
 import org.dynamisengine.input.api.bind.*;
 import org.dynamisengine.input.api.context.InputMap;
@@ -44,9 +46,9 @@ public final class AnimEventGame implements WorldApplication {
     private static final int KEY_EQUAL=61,KEY_MINUS=45;
     private static final int KEY_ESC=256,KEY_R=82;
 
-    private final WindowSubsystem windowSub;
-    private final WindowInputSubsystem inputSub;
-    private final AudioSubsystem audioSub;
+    private final GlfwWindowSubsystem windowSub;
+    private final WindowInputWorldSubsystem inputSub;
+    private final AudioWorldSubsystem audioSub;
     private final SceneRenderer renderer = new SceneRenderer();
 
     private MeshHandle torusMesh, sphereMesh, cubeMesh;
@@ -63,7 +65,7 @@ public final class AnimEventGame implements WorldApplication {
     private final Deque<String> eventLog = new ArrayDeque<>();
     private static final int MAX_LOG = 6;
 
-    public AnimEventGame(WindowSubsystem w, WindowInputSubsystem i, AudioSubsystem a) {
+    public AnimEventGame(GlfwWindowSubsystem w, WindowInputWorldSubsystem i, AudioWorldSubsystem a) {
         this.windowSub = w; this.inputSub = i; this.audioSub = a;
     }
 
