@@ -34,6 +34,7 @@ public final class ShrineScriptFacade {
         // 2. "shrine.deny"   fires when player lacks key
         this.runtime = RuntimeBuilder.create()
                 .withConfiguration(RuntimeConfiguration.defaults())
+                .withDimension(new ShrineDimension())
                 .withStoryNode(StoryNode.of(
                         "shrine.unlock",
                         "authored",
