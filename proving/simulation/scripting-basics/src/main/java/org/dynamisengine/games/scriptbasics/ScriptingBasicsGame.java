@@ -116,11 +116,12 @@ public final class ScriptingBasicsGame implements WorldApplication {
             var tickResult = scriptFacade.lastTickResult();
             System.out.printf("[tick=%d] INTERACT -> %s | %s%n", tick, lastOutcome, statusMessage);
             if (tickResult != null) {
-                System.out.printf("  scripting: proposed=%d committed=%d duration=%.2fms canonTick=%d%n",
+                System.out.printf("  scripting: proposed=%d committed=%d duration=%.2fms canonTick=%d canonLog=%d%n",
                         tickResult.worldEventsProposed(),
                         tickResult.worldEventsCommitted(),
                         tickResult.tickDurationNanos() / 1_000_000.0,
-                        tickResult.canonTime().tick());
+                        tickResult.canonTime().tick(),
+                        scriptFacade.canonLogSize());
             }
         }
     }

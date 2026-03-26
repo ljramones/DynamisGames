@@ -28,13 +28,16 @@ A sealed door blocks the path. A shrine nearby evaluates whether the player hold
 Player input (E key)
   → ScriptingBasicsGame detects interaction
   → ShrineScriptFacade.evaluateInteraction(hasKey, doorOpen)
-    → seeds gameplay state into canon log
-    → ticks ScriptingRuntime (Chronicler evaluates story nodes)
-    → Oracle commits matching world events
-    → queries canon log for committed events
+    → gameplay evaluates conditions (hasKey, doorOpen)
+    → commits interaction as canonical world event with causal link
+    → ticks ScriptingRuntime (Chronicler evaluates story nodes, Oracle commits)
     → returns ShrineScriptOutcome (OPEN_DOOR / DENIED_NO_KEY / ALREADY_OPEN)
   → Game applies outcome: door state, audio cue, status message
 ```
+
+The key separation: gameplay owns condition logic, scripting owns canonical
+commit ordering and causal tracking. The canon log provides an auditable,
+queryable history of all world state changes.
 
 ## Controls
 
