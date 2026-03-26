@@ -118,6 +118,11 @@ public final class SkinnedMeshBasicsApp {
 
                 frameCount++;
 
+                if (frameCount == 1) {
+                    System.out.println("*** FIRST FRAME RENDERED ***");
+                    System.out.flush();
+                }
+
                 // Debug output every 120 frames
                 if (frameCount % 120 == 0) {
                     EngineStats stats = runtime.getStats();
@@ -135,7 +140,7 @@ public final class SkinnedMeshBasicsApp {
                 // TODO: input handling for Space/N/Esc requires EngineInput
                 // integration which depends on the backend's window event loop.
                 // For now, runs until max frames or external termination.
-                if (frameCount >= 600) break; // 10 seconds at 60fps
+                if (frameCount >= 60) break; // 1 second test run
             }
 
             double totalMs = (System.nanoTime() - startNanos) / 1_000_000.0;
