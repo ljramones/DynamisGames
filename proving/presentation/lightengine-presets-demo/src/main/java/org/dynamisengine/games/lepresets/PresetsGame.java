@@ -1,5 +1,6 @@
 package org.dynamisengine.games.lepresets;
 
+import org.dynamisengine.games.commons.render.SceneRenderer;
 import org.dynamisengine.games.commons.model.SimpleMesh;
 import org.dynamisengine.games.commons.model.SimpleMaterial;
 import org.dynamisengine.games.commons.model.DirectionalLight;

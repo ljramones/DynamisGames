@@ -1,4 +1,4 @@
-package org.dynamisengine.games.anim;
+package org.dynamisengine.games.commons.render;
 
 import org.dynamisengine.games.commons.model.SimpleMesh;
 import org.dynamisengine.games.commons.model.SimpleMaterial;

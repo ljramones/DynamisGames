@@ -1,5 +1,6 @@
 package org.dynamisengine.games.lighting;
 
+import org.dynamisengine.games.commons.render.SceneRenderer;
 import org.dynamisengine.games.commons.model.SimpleMesh;
 import org.dynamisengine.games.commons.model.SimpleMaterial;
 import org.dynamisengine.games.commons.model.DirectionalLight;
@@ -49,7 +50,7 @@ public final class LightingGame implements WorldApplication {
     private final GlfwWindowSubsystem windowSub;
     private final WindowInputWorldSubsystem inputSub;
     private final AudioWorldSubsystem audioSub;
-    private final LightingRenderer renderer = new LightingRenderer();
+    private final SceneRenderer renderer = new SceneRenderer();
 
     private MeshHandle torusHandle;
     private MeshHandle sphereHandle; // small sphere for point light indicator
@@ -137,9 +138,9 @@ public final class LightingGame implements WorldApplication {
 
         var ws = windowSub.window().framebufferSize();
         int w = ws.width(), h = ws.height();
-        float[] proj = LightingRenderer.perspective(60f, (float)w/h, 0.1f, 100f);
-        float[] view = LightingRenderer.lookAt(camX, camY, camZ, 0, 0, 0, 0, 1, 0);
-        float[] vp = LightingRenderer.multiply(proj, view);
+        float[] proj = SceneRenderer.perspective(60f, (float)w/h, 0.1f, 100f);
+        float[] view = SceneRenderer.lookAt(camX, camY, camZ, 0, 0, 0, 0, 1, 0);
+        float[] vp = SceneRenderer.multiply(proj, view);
 
         // Point light orbits at y=1.5, radius=4
         float ptX = 4f * (float)Math.cos(time * 0.8);
@@ -157,9 +158,9 @@ public final class LightingGame implements WorldApplication {
             float angle = (float)(Math.PI * (i - 2) / 4);
             float px = 3.5f * (float)Math.sin(angle);
             float pz = 3.5f * (float)Math.cos(angle) - 1f;
-            float[] model = LightingRenderer.translate(LightingRenderer.identity(), px, 0, pz);
-            model = LightingRenderer.rotateY(model, time * 0.3f + i);
-            float[] mvp = LightingRenderer.multiply(vp, model);
+            float[] model = SceneRenderer.translate(SceneRenderer.identity(), px, 0, pz);
+            model = SceneRenderer.rotateY(model, time * 0.3f + i);
+            float[] mvp = SceneRenderer.multiply(vp, model);
             renderer.drawMesh(torusHandle, mvp, model, MATS[i], camX, camY, camZ);
         }
 

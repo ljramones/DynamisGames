@@ -12,5 +12,24 @@
 
   <artifactId>proving-commons</artifactId>
   <name>Proving Commons</name>
-  <description>Shared record types used across proving modules: mesh, material, and light definitions.</description>
+  <description>Shared types used across proving modules: model records, scene renderer, and text rendering.</description>
+
+  <dependencies>
+    <!-- OpenGL rendering for SceneRenderer -->
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl</artifactId>
+      <version>3.3.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl-opengl</artifactId>
+      <version>3.3.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl-stb</artifactId>
+      <version>3.3.4</version>
+    </dependency>
+  </dependencies>
 </project>

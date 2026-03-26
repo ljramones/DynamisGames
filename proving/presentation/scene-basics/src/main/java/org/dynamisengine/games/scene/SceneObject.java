@@ -1,5 +1,6 @@
 package org.dynamisengine.games.scene;
 
+import org.dynamisengine.games.commons.render.SceneRenderer;
 import org.dynamisengine.games.commons.model.SimpleMaterial;
 import org.dynamisengine.games.commons.model.MeshHandle;
 
