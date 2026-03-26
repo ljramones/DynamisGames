@@ -33,7 +33,7 @@
     </dependency>
     <dependency>
       <groupId>org.dynamisengine.light</groupId>
-      <artifactId>engine-impl-opengl</artifactId>
+      <artifactId>engine-impl-vulkan</artifactId>
       <version>0.1.0-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
@@ -76,7 +76,14 @@
     </dependency>
     <dependency>
       <groupId>org.lwjgl</groupId>
-      <artifactId>lwjgl-opengl</artifactId>
+      <artifactId>lwjgl-vulkan</artifactId>
+      <version>3.3.6</version>
+      <classifier>natives-macos-arm64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl-shaderc</artifactId>
       <version>3.3.6</version>
       <classifier>natives-macos-arm64</classifier>
       <scope>runtime</scope>

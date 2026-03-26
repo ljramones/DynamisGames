@@ -42,7 +42,7 @@ import org.dynamisengine.light.spi.registry.BackendRegistry;
  */
 public final class SkinnedMeshBasicsApp {
 
-    private static final String BACKEND = System.getProperty("dle.backend", "opengl");
+    private static final String BACKEND = System.getProperty("dle.backend", "vulkan");
     private static final int WIDTH = 800;
     private static final int HEIGHT = 600;
 
@@ -79,8 +79,11 @@ public final class SkinnedMeshBasicsApp {
 
         EngineConfig config = new EngineConfig(
                 BACKEND, "skinned-mesh-basics", WIDTH, HEIGHT, 1.0f, true, 60,
-                QualityTier.MEDIUM, null,
-                Map.of(BACKEND + ".windowVisible", "true"));
+                QualityTier.MEDIUM, Path.of("."),
+                Map.of(
+                    BACKEND + ".mockContext", "false",
+                    BACKEND + ".windowVisible", "true"
+                ));
 
         SceneDescriptor scene = buildScene(glbPath.toString());
 
