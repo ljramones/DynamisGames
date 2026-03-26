@@ -17,5 +17,6 @@
 
     <modules>
         <module>physics-basics</module>
+        <module>scripting-basics</module>
     </modules>
 </project>
