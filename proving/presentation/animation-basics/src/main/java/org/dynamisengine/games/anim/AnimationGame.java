@@ -1,5 +1,11 @@
 package org.dynamisengine.games.anim;
 
+import org.dynamisengine.games.commons.model.SimpleMesh;
+import org.dynamisengine.games.commons.model.SimpleMaterial;
+import org.dynamisengine.games.commons.model.DirectionalLight;
+import org.dynamisengine.games.commons.model.PointLight;
+import org.dynamisengine.games.commons.model.MeshHandle;
+
 import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
 import org.dynamisengine.audio.world.AudioWorldSubsystem;
 import org.dynamisengine.input.window.WindowInputWorldSubsystem;

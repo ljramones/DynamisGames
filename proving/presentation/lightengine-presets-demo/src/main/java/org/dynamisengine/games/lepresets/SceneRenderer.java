@@ -1,5 +1,11 @@
 package org.dynamisengine.games.lepresets;
 
+import org.dynamisengine.games.commons.model.SimpleMesh;
+import org.dynamisengine.games.commons.model.SimpleMaterial;
+import org.dynamisengine.games.commons.model.DirectionalLight;
+import org.dynamisengine.games.commons.model.PointLight;
+import org.dynamisengine.games.commons.model.MeshHandle;
+
 import org.lwjgl.opengl.GL;
 import org.lwjgl.stb.STBEasyFont;
 

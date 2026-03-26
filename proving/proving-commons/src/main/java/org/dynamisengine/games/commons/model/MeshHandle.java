@@ -1,4 +1,4 @@
-package org.dynamisengine.games.animevents;
+package org.dynamisengine.games.commons.model;
 
 /**
  * GPU handle for an uploaded mesh. Holds VAO, VBO, EBO, and index count.

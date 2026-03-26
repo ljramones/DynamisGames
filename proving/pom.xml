@@ -15,6 +15,7 @@
     <description>Progressive proving ladder validating each engine subsystem.</description>
 
     <modules>
+        <module>proving-commons</module>
         <module>runtime-foundation</module>
         <module>presentation</module>
         <module>simulation</module>

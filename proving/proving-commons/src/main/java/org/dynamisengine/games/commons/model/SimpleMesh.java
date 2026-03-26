@@ -1,4 +1,4 @@
-package org.dynamisengine.games.anim;
+package org.dynamisengine.games.commons.model;
 
 /**
  * Indexed triangle mesh — the canonical mesh data structure.

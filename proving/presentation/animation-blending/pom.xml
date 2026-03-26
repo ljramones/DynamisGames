@@ -12,6 +12,7 @@
   <name>Animation Blending</name>
   <description>Smooth crossfade between two animation clips.</description>
   <dependencies>
+    <dependency><groupId>org.dynamisengine.games</groupId><artifactId>proving-commons</artifactId><version>1.0.0-SNAPSHOT</version></dependency>
     <dependency><groupId>org.dynamisengine.worldengine</groupId><artifactId>world-api</artifactId><version>1.0.0-SNAPSHOT</version></dependency>
     <dependency><groupId>org.dynamisengine.worldengine</groupId><artifactId>world-runtime</artifactId><version>1.0.0-SNAPSHOT</version></dependency>
     <dependency><groupId>org.dynamisengine.audio</groupId><artifactId>dynamis-audio-api</artifactId><version>0.1.0-SNAPSHOT</version></dependency>

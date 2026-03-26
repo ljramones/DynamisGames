@@ -1,4 +1,4 @@
-package org.dynamisengine.games.lighting;
+package org.dynamisengine.games.commons.model;
 
 /**
  * Proving-level material definition.

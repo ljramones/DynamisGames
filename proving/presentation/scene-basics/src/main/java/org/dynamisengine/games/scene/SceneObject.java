@@ -1,5 +1,8 @@
 package org.dynamisengine.games.scene;
 
+import org.dynamisengine.games.commons.model.SimpleMaterial;
+import org.dynamisengine.games.commons.model.MeshHandle;
+
 /**
  * Proving-level scene object — a mesh instance with transform and material.
  *

@@ -1,5 +1,9 @@
 package org.dynamisengine.games.material;
 
+import org.dynamisengine.games.commons.model.SimpleMesh;
+import org.dynamisengine.games.commons.model.SimpleMaterial;
+import org.dynamisengine.games.commons.model.MeshHandle;
+
 import org.lwjgl.opengl.GL;
 import org.lwjgl.stb.STBEasyFont;
 

@@ -1,5 +1,8 @@
 package org.dynamisengine.games.mesh;
 
+import org.dynamisengine.games.commons.model.SimpleMesh;
+import org.dynamisengine.games.commons.model.MeshHandle;
+
 import org.dynamisengine.window.glfw.GlfwWindowSubsystem;
 import org.dynamisengine.audio.world.AudioWorldSubsystem;
 import org.dynamisengine.input.window.WindowInputWorldSubsystem;

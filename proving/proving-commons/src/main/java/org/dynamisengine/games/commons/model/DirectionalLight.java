@@ -1,4 +1,4 @@
-package org.dynamisengine.games.animsync;
+package org.dynamisengine.games.commons.model;
 
 /**
  * Proving-level directional light (infinite distance, parallel rays).
