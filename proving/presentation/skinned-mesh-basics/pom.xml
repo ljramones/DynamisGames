@@ -36,6 +36,17 @@
       <artifactId>engine-impl-vulkan</artifactId>
       <version>0.1.0-SNAPSHOT</version>
       <scope>runtime</scope>
+      <exclusions>
+        <!-- Scene does not need sky — exclude to prevent ServiceLoader activation -->
+        <exclusion>
+          <groupId>org.dynamisengine.sky</groupId>
+          <artifactId>dynamissky-vulkan</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.dynamissky</groupId>
+          <artifactId>dynamissky-vulkan</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!-- Animis (animation loading + runtime) -->
     <dependency>
