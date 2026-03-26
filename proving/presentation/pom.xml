@@ -27,5 +27,6 @@
         <module>animation-blending</module>
         <module>animation-gameplay-sync</module>
         <module>lightengine-presets-demo</module>
+        <module>skinned-mesh-basics</module>
     </modules>
 </project>
