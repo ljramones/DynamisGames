@@ -63,16 +63,21 @@ public final class ScriptingBasicsGame implements WorldApplication {
     public void update(GameContext context, float deltaSeconds) {
         long tick = context.tick();
 
-        if (windowSub.isCloseRequested()) return;
-
         // Read input events
         boolean ePressed = false;
         boolean kPressed = false;
+        boolean escPressed = false;
         for (var event : windowSub.lastEvents().inputEvents()) {
             if (event instanceof InputEvent.Key key && key.action() == InputEvent.InputAction.PRESS) {
-                if (key.keyCode() == 69) ePressed = true;  // E
-                if (key.keyCode() == 75) kPressed = true;  // K
+                if (key.keyCode() == 256) escPressed = true; // ESC
+                if (key.keyCode() == 69) ePressed = true;    // E
+                if (key.keyCode() == 75) kPressed = true;    // K
             }
+        }
+
+        if (escPressed || windowSub.isCloseRequested()) {
+            System.out.println("Exiting...");
+            System.exit(0);
         }
 
         // Toggle key state

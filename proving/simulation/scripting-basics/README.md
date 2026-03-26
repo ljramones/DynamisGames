@@ -45,7 +45,7 @@ queryable history of all world state changes.
 |-----|--------|
 | K | Toggle key (pick up / drop) |
 | E | Interact with shrine |
-| Close window | Quit |
+| Esc | Quit |
 
 ## Build & Run
 
