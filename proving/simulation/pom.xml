@@ -18,5 +18,6 @@
     <modules>
         <module>physics-basics</module>
         <module>scripting-basics</module>
+        <module>ai-basics</module>
     </modules>
 </project>
