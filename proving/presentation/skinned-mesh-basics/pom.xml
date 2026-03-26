@@ -46,6 +46,7 @@
           <groupId>org.dynamissky</groupId>
           <artifactId>dynamissky-vulkan</artifactId>
         </exclusion>
+        <!-- VFX kept on classpath — engine gracefully disables on simulate failure -->
       </exclusions>
     </dependency>
     <!-- Animis (animation loading + runtime) -->
