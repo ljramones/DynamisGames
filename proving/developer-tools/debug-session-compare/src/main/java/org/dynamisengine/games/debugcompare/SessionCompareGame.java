@@ -468,7 +468,52 @@ public final class SessionCompareGame implements WorldApplication {
     private static final float W_ALERT_COUNT = 5f;    // per alert delta
     private static final float W_NEW_ERROR = 15f;     // per new ERROR/CRITICAL alert
     private static final float W_NEW_WARNING = 8f;    // per new WARNING alert
-    private static final float W_METRIC = 1f;         // per unit of subsystem metric delta
+    private static final float W_METRIC = 1f;         // default per unit of subsystem metric delta
+
+    /**
+     * Per-metric weight overrides. Timing metrics (ms) weight higher than counts
+     * because they directly indicate frame budget impact. GPU and physics timing
+     * weight highest because they are the hardest to diagnose without telemetry.
+     */
+    private static final Map<String, Float> METRIC_WEIGHTS = Map.ofEntries(
+        // GPU timing — highest weight (hardest to diagnose, most frame-budget impact)
+        Map.entry("gpu.frameTimeMs", 4f),
+        Map.entry("gpu.shadowPassMs", 3f),
+        Map.entry("gpu.geometryPassMs", 3f),
+        Map.entry("gpu.postProcessMs", 3f),
+        Map.entry("gpu.uiPassMs", 2f),
+        // CPU frame timing — high weight
+        Map.entry("frameTimeMs", 3f),
+        Map.entry("stepTimeMs", 3f),
+        Map.entry("ecs.frameTotalMs", 3f),
+        Map.entry("ecs.dominantSystemTimeMs", 2.5f),
+        // Physics per-phase — meaningful timing
+        Map.entry("broadPhaseMs", 2.5f),
+        Map.entry("solverMs", 2.5f),
+        Map.entry("integrationMs", 2f),
+        // AI execution timing
+        Map.entry("execution.frameTotalMs", 3f),
+        Map.entry("execution.hottestTaskMs", 2.5f),
+        Map.entry("sim.tickElapsedMs", 2.5f),
+        // Scripting timing
+        Map.entry("canon.tickDurationMs", 2.5f),
+        Map.entry("chronicler.executionMs", 2f),
+        // Audio — underruns are severe
+        Map.entry("ringUnderruns", 10f),
+        Map.entry("dspBudgetPercent", 1.5f),
+        // Rendering submission — moderate
+        Map.entry("drawCalls", 0.5f),
+        Map.entry("pipelineSwitches", 1f),
+        // Counts — low weight (normal variation)
+        Map.entry("contacts", 0.3f),
+        Map.entry("entityCount", 0.1f),
+        Map.entry("physicalVoiceCount", 0.2f),
+        // Cache/errors — moderate, signals problems
+        Map.entry("failedResolutions", 5f),
+        Map.entry("evaluation.errorCount", 5f),
+        Map.entry("execution.timeoutInferences", 5f),
+        Map.entry("cacheMisses", 0.5f)
+    );
 
     private void renderDiffSummary(DebugViewSnapshot left, DebugViewSnapshot right,
                                     int centerX, int w, int h) {
@@ -541,10 +586,12 @@ public final class SessionCompareGame implements WorldApplication {
                         double rv = Double.parseDouble(rightVal);
                         double delta = rv - lv;
                         if (delta > DELTA_THRESHOLD) {
-                            float contrib = (float)(delta * W_METRIC);
+                            String metricName = metricEntry.getKey();
+                            float weight = METRIC_WEIGHTS.getOrDefault(metricName, W_METRIC);
+                            float contrib = (float)(delta * weight);
                             score += contrib;
-                            String name = metricEntry.getKey();
-                            if (name.length() > 15) name = name.substring(0, 15);
+                            String name = metricName;
+                            if (name.length() > 20) name = name.substring(0, 20);
                             contributors.add(new ScoreContributor(name, contrib, delta));
                         }
                     } catch (NumberFormatException ignored) {}
@@ -887,7 +934,10 @@ public final class SessionCompareGame implements WorldApplication {
                     if (rv == null) continue;
                     try {
                         double d = Double.parseDouble(rv) - Double.parseDouble(me.getValue());
-                        if (d > DELTA_THRESHOLD) contributors.add(new ScoreContributor(me.getKey(), (float)(d * W_METRIC), d));
+                        if (d > DELTA_THRESHOLD) {
+                            float w = METRIC_WEIGHTS.getOrDefault(me.getKey(), W_METRIC);
+                            contributors.add(new ScoreContributor(me.getKey(), (float)(d * w), d));
+                        }
                     } catch (NumberFormatException ignored) {}
                 }
             }
@@ -1022,7 +1072,10 @@ public final class SessionCompareGame implements WorldApplication {
                     if (rightVal == null) continue;
                     try {
                         double delta = Double.parseDouble(rightVal) - Double.parseDouble(metricEntry.getValue());
-                        if (delta > DELTA_THRESHOLD) score += (float)(delta * W_METRIC);
+                        if (delta > DELTA_THRESHOLD) {
+                            float w = METRIC_WEIGHTS.getOrDefault(metricEntry.getKey(), W_METRIC);
+                            score += (float)(delta * w);
+                        }
                     } catch (NumberFormatException ignored) {}
                 }
             }
